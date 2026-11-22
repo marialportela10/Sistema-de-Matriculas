@@ -15,10 +15,10 @@ progressoRouter.get("/", async (_req, res, next) => {
     const alunoId = res.locals.alunoId as number;
     const aluno = await prisma.aluno.findUnique({
       where: { id: alunoId },
-      select: { curso: true },
+      select: { cursoId: true },
     });
-    const curso = aluno?.curso
-      ? await prisma.curso.findUnique({ where: { nome: aluno.curso } })
+    const curso = aluno
+      ? await prisma.curso.findUnique({ where: { id: aluno.cursoId } })
       : null;
     if (!curso) {
       res.status(404).json({ error: "O aluno ainda não possui estrutura curricular cadastrada." });
@@ -32,7 +32,7 @@ progressoRouter.get("/", async (_req, res, next) => {
         include: { disciplina: true },
       }),
       prisma.matricula.findMany({
-        where: { alunoId },
+        where: { alunoId, situacao: "ATIVA" },
         include: { turma: { include: { disciplina: true } } },
       }),
     ]);
