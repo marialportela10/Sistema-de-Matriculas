@@ -10,7 +10,10 @@ Protótipo acadêmico em desenvolvimento, com **React + Vite + TypeScript** no f
 - Matrícula com validação de vagas, duplicidade, disciplina já cursada no mesmo período e conflito de horários.
 - Cancelamento de matrícula com tentativa de promoção da lista de espera.
 - Entrada, consulta e saída da lista de espera.
-- Interface de ofertas, favoritos, busca/paginação na URL, revisão antes de confirmar, planejamento e resumo das matrículas.
+- Portal do aluno baseado no protótipo `prototipo-matricula-5-abas-perfil.html`, com **cinco abas**: **Visão geral**, **Fazer matrícula**, **Lista de espera**, **Disciplinas** e **Carga horária**.
+- Grade semanal acima das ofertas: turmas selecionadas aparecem imediatamente e conflitos de horário ou disciplina são bloqueados; revisão antes de confirmar.
+- Catálogo de disciplinas com ementas, favoritos por aluno e busca/paginação na URL.
+- Cabeçalho com nome completo, curso e semestre do aluno. Cadastro fictício permite escolher curso.
 - Testes unitários para IDs de turmas, conflitos de horário e regras acadêmicas.
 
 > **Importante:** esta autenticação é adequada apenas para testar o protótipo local. Ainda faltam recuperação de senha, integração com identidade institucional, controles operacionais mais fortes e auditoria para uso real. Não utilize dados pessoais reais.
@@ -37,9 +40,11 @@ npm.cmd run db:seed
 npm.cmd run dev
 ```
 
-A API fica disponível em `http://localhost:3001`. Se o banco já existir, faça uma cópia de segurança antes de aplicar a migração. A migração `20261122213000_student_sessions` cria a tabela de sessões e adiciona um hash de senha opcional aos alunos existentes, preservando os registros antigos.
+A API fica disponível em `http://localhost:3001`. Se o banco já existir, faça uma cópia de segurança antes de aplicar as migrações. A migração `20261122213000_student_sessions` cria sessões e preserva os alunos antigos sem atribuir senha padrão; a migração `20261122234500_student_course_and_syllabus` adiciona curso opcional aos alunos e ementa às disciplinas. Nenhuma dessas migrações apaga registros.
 
-**Para entrar pela primeira vez:** abra o frontend, clique em **Criar conta**, informe um número de matrícula fictício e uma senha de pelo menos 8 caracteres; depois use esses dados no formulário **Entrar no sistema**. Contas criadas antes desta mudança não têm senha e não podem usar o login até que recebam uma senha por um procedimento administrativo. Não foi atribuída nenhuma senha padrão a esses alunos.
+**Atualizar um banco existente:** pare o backend, faça backup de `backend/prisma/dev.db`, execute `npx.cmd prisma migrate deploy` dentro de `backend`, depois `npx.cmd prisma generate` e `npm.cmd run db:seed`. O seed é idempotente e adiciona 6 disciplinas / 9 ofertas fictícias sem remover turmas já cadastradas.
+
+**Para entrar pela primeira vez:** abra o frontend, clique em **Criar conta**, informe nome completo, curso, matrícula fictícia e senha de pelo menos 8 caracteres; depois use esses dados no formulário **Entrar no sistema**. Contas criadas antes desta mudança não têm senha e não podem usar o login até que recebam uma senha por um procedimento administrativo. Não foi atribuída nenhuma senha padrão a esses alunos.
 
 Para validar o backend:
 
@@ -94,6 +99,10 @@ Para cancelar uma matrícula ou sair da lista, envie `{ "alunoId": 1 }` no corpo
 - Commits em inglês, com prefixos `setup:`, `feat:`, `fix:` e `docs:`.
 
 Esta branch de desenvolvimento está sendo atualizada no GitHub. O GitLab da UFPE não recebe automaticamente esses commits; faça o sincronismo depois de revisar e testar.
+
+## Limites atuais do progresso curricular
+
+A aba **Carga horária** explica os grupos (obrigatórias, eletivas de perfil e eletivas livres) e mostra apenas a carga horária real das matrículas atuais. O modelo ainda não contém o histórico de aprovações nem a estrutura curricular com metas por curso; por isso, **não exibe percentuais ou horas concluídas fictícias**. A classificação por tipo de disciplina também depende desses dados. Essas são partes obrigatórias do teste prático ainda pendentes.
 
 ## Próximas etapas
 
