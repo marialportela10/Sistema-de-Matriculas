@@ -64,6 +64,11 @@ listaEsperaRouter.post("/", async (req, res, next) => {
         },
       });
       if (!turma) throw new ErroDaFila(404, "Turma nao encontrada.");
+      const aprovado = await tx.historico.findFirst({
+        where: { alunoId, disciplinaId: turma.disciplinaId, situacao: "APROVADA" },
+        select: { id: true },
+      });
+      if (aprovado) throw new ErroDaFila(409, "Disciplina já aprovada. Não é permitido cursá-la novamente.");
 
       if (turma._count.matriculas < turma.capacidade) {
         throw new ErroDaFila(409, "Ainda ha vagas. Faca a matricula diretamente.");
