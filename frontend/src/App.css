@@ -144,6 +144,10 @@ button:disabled { opacity: .55; cursor: not-allowed; }
 .aviso strong { font-weight: 800; }
 .aviso span { flex: 1 1 280px; }
 .aviso button { position: absolute; right: 8px; top: 5px; border: 0; background: transparent; color: inherit; min-width: 34px; min-height: 34px; font-size: 1.4rem; }
+.aviso .aviso-repetir { position: static; min-width: auto; min-height: 36px; font-size: .83rem;
+  padding: 7px 11px; border: 1px solid currentColor; border-radius: 8px; font-weight: 750;
+  background: transparent; }
+.aviso .aviso-repetir:hover { background: #ffffff99; }
 .aviso-erro { background: var(--cor-erro-fundo); color: var(--cor-erro-texto); border-color: var(--cor-erro-borda); }
 .aviso-sucesso { background: var(--cor-sucesso-fundo); color: var(--cor-sucesso-texto); border-color: var(--cor-sucesso-borda); }
 .aviso-espera { background: var(--cor-espera-fundo); color: var(--cor-espera-texto); border-color: var(--cor-espera-borda); }
