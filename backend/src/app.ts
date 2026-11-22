@@ -3,6 +3,7 @@ import cors from "cors";
 import { prisma } from "./database/prisma.js";
 import { alunosRouter } from "./routes/alunos.js";
 import { matriculasRouter } from "./routes/matriculas.js";
+import { listaEsperaRouter } from "./routes/lista-espera.js";
 
 export const app = express();
 
@@ -36,11 +37,15 @@ app.get("/api/turmas", async (_req, res) => {
     orderBy: { id: "asc" },
   });
 
-  res.json(turmas);
+  res.json(turmas.map((turma) => ({
+    ...turma,
+    vagasDisponiveis: Math.max(0, turma.capacidade - turma._count.matriculas),
+  })));
 });
 
 app.use("/api/alunos", alunosRouter);
 app.use("/api/matriculas", matriculasRouter);
+app.use("/api/lista-espera", listaEsperaRouter);
 
 // Resposta simples quando houver falha no acesso ao banco.
 app.use((
