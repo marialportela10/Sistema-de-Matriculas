@@ -43,6 +43,8 @@
 .admin-formulario form { display: flex; flex-direction: column; gap: 10px; }
 .admin-formulario label { font-size: .87rem; font-weight: 750; color: #263f50; }
 .admin-campo-ajuda { color: #4b6577; font-size: .76rem; line-height: 1.35; }
+.admin-campo-erro { color: #7f1d1d; font-size: .77rem; line-height: 1.4; font-weight: 700; }
+.admin-formulario input.admin-somente-leitura { background: #eff4f7; color: #344b5c; cursor: not-allowed; border-color: #c4d1da; }
 .admin-formulario input, .admin-formulario select, .admin-formulario textarea,
 .admin-filtros input, .admin-vagas input {
   background: #fff; color: #172a3a; border: 1px solid #8ca4b4; border-radius: 9px;
