@@ -52,8 +52,10 @@ export type Espera = {
 };
 
 export class ApiError extends Error {
-  constructor(public status: number, message: string) {
+  readonly status: number;
+  constructor(status: number, message: string) {
     super(message);
+    this.status = status;
   }
 }
 
