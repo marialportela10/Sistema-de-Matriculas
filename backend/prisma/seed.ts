@@ -50,6 +50,8 @@ async function seed() {
       horarios: [{ diaSemana: 1, inicio: "08:00", fim: "10:00" }, { diaSemana: 3, inicio: "08:00", fim: "10:00" }] },
     { id: "IP0002", disciplinaCodigo: "IP", codigo: "B", professor: "Lívia Barros", capacidade: 25,
       horarios: [{ diaSemana: 1, inicio: "10:00", fim: "12:00" }, { diaSemana: 3, inicio: "10:00", fim: "12:00" }] },
+    { id: "IP0003", disciplinaCodigo: "IP", codigo: "C", professor: "Lívia Barros", capacidade: 1,
+      horarios: [{ diaSemana: 2, inicio: "14:00", fim: "16:00" }, { diaSemana: 4, inicio: "14:00", fim: "16:00" }] },
     { id: "ED0001", disciplinaCodigo: "EDOO", codigo: "C", professor: "Helena Costa", capacidade: 20,
       horarios: [{ diaSemana: 1, inicio: "08:00", fim: "10:00" }, { diaSemana: 4, inicio: "14:00", fim: "16:00" }] },
     { id: "ED0002", disciplinaCodigo: "EDOO", codigo: "D", professor: "Carlos Lima", capacidade: 24,
@@ -139,7 +141,24 @@ async function seed() {
     });
   }
 
-  console.log("Dados fictícios disponíveis: 2 cursos, 6 disciplinas, 9 turmas e conta DEMO2026.");
+  // Uma oferta lotada para testar o fluxo de lista de espera sem alterar vagas antigas.
+  const reserva = await prisma.aluno.upsert({
+    where: { numeroMatricula: "RESERVA2026" },
+    update: {},
+    create: {
+      nome: "Estudante Reserva",
+      email: "reserva@example.test",
+      numeroMatricula: "RESERVA2026",
+      curso: "Ciência da Computação",
+      senhaHash: await gerarHashSenha("Demo@12345"),
+    },
+  });
+  const vagas = await prisma.matricula.count({ where: { turmaId: "IP0003" } });
+  if (vagas === 0) {
+    await prisma.matricula.create({ data: { alunoId: reserva.id, turmaId: "IP0003" } });
+  }
+
+  console.log("Dados fictícios disponíveis: 2 cursos, 6 disciplinas, 10 turmas, uma lotada e conta DEMO2026.");
 }
 
 seed()
