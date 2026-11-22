@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
-import { api, ApiError, type Aluno, type Espera, type Matricula, type Turma, type Progresso } from "./api";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { api, ApiError, type Aluno, type Espera, type Matricula, type Turma, type Progresso, type Secretaria } from "./api";
 import Login from "./Login";
+import Admin from "./Admin";
 import "./App.css";
 
 type Aba = "overview" | "enroll" | "wait" | "catalog" | "hours";
@@ -105,6 +106,8 @@ function favoritosIniciais(): number[] {
 
 function App() {
   const [aluno, setAluno] = useState<Aluno | null>(null);
+  const [secretaria, setSecretaria] = useState<Secretaria | null>(null);
+  const expirarSecretaria = useCallback(() => setSecretaria(null), []);
   const [verificando, setVerificando] = useState(true);
   const [aba, setAba] = useState<Aba>("overview");
   const [turmas, setTurmas] = useState<Turma[]>([]);
@@ -141,10 +144,14 @@ function App() {
 
   useEffect(() => {
     let ativo = true;
-    void api.sessao().then((conta) => {
-      if (ativo) setAluno(conta);
-    }).catch(() => {
-      // Sem sessão: mostra a tela de login.
+    void Promise.all([
+      api.adminSessao().catch(() => null),
+      api.sessao().catch(() => null),
+    ]).then(([gestor, estudante]) => {
+      if (!ativo) return;
+      // O perfil administrativo nunca reutiliza a sessão do aluno.
+      if (gestor) setSecretaria(gestor);
+      else if (estudante) setAluno(estudante);
     }).finally(() => { if (ativo) setVerificando(false); });
     return () => { ativo = false; };
   }, []);
@@ -352,7 +359,12 @@ function App() {
   }
 
   if (verificando) return <main className="carregando-tela" role="status">Verificando acesso ao portal…</main>;
-  if (!aluno) return <Login onEntrar={(conta) => { setCarregando(true); setAviso(null); setAluno(conta); }} />;
+  if (secretaria) return <Admin secretaria={secretaria}
+    onSair={() => setSecretaria(null)} onExpirada={expirarSecretaria} />;
+  if (!aluno) return <Login
+    onEntrar={(conta) => { setCarregando(true); setAviso(null); setAluno(conta); }}
+    onEntrarSecretaria={(conta) => { setAviso(null); setSecretaria(conta); }}
+  />;
 
   const periodo = turmas[0]?.periodo ?? "Semestre atual";
   const iniciais = aluno.nome.trim().split(/\s+/).slice(0, 2).map((p) => p[0] ?? "").join("").toUpperCase();
