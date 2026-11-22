@@ -20,7 +20,19 @@ app.get("/api/health", (_req, res) => {
   });
 });
 
-// Apenas as rotas de autenticação e de saúde são públicas.
+// A lista de cursos é pública apenas para o formulário de cadastro de demonstração.
+app.get("/api/cursos", async (_req, res, next) => {
+  try {
+    const cursos = await prisma.curso.findMany({
+      where: { codigo: { in: ["SI", "CC"] } },
+      select: { id: true, codigo: true, nome: true },
+      orderBy: { nome: "asc" },
+    });
+    res.json(cursos);
+  } catch (error) { next(error); }
+});
+
+// As outras rotas exigem login e ficam vinculadas ao perfil do aluno.
 app.use("/api/auth", authRouter);
 app.use("/api", exigirAutenticacao);
 app.use("/api", (_req, res, next) => {
@@ -49,19 +61,20 @@ app.get("/api/turmas", async (_req, res) => {
       },
       orderBy: { id: "asc" },
     }),
-    prisma.aluno.findUnique({ where: { id: alunoId }, select: { curso: true } }),
+    prisma.aluno.findUnique({ where: { id: alunoId }, select: { cursoId: true } }),
     prisma.historico.findMany({
       where: { alunoId, situacao: "APROVADA" },
       select: { disciplinaId: true },
     }),
   ]);
-  const curso = aluno?.curso ? await prisma.curso.findUnique({ where: { nome: aluno.curso } }) : null;
+  const curso = aluno ? await prisma.curso.findUnique({ where: { id: aluno.cursoId } }) : null;
   const estrutura = curso ? await prisma.curriculoDisciplina.findMany({ where: { cursoId: curso.id } }) : [];
   const categorias = new Map(estrutura.map((item) => [item.disciplinaId, item.tipo]));
   const aprovadas = new Set(historico.map((item) => item.disciplinaId));
 
   res.json(turmas.map((turma) => ({
     ...turma,
+    professor: turma.docente.nome,
     vagasDisponiveis: Math.max(0, turma.capacidade - turma._count.matriculas),
     classificacao: curso ? (categorias.get(turma.disciplinaId) ?? "eletiva-livre") : null,
     jaAprovada: aprovadas.has(turma.disciplinaId),
