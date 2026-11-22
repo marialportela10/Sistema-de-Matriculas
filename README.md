@@ -7,13 +7,14 @@ Protótipo acadêmico em desenvolvimento, com **React + Vite + TypeScript** no f
 - Consulta de disciplinas, turmas, horários e vagas.
 - Login com número de matrícula e senha (hash scrypt), sessões em cookie HttpOnly, logout e cadastro de contas fictícias.
 - Consultas e operações de matrícula vinculadas ao aluno autenticado.
-- Matrícula com validação de vagas, duplicidade, disciplina já cursada no mesmo período e conflito de horários.
+- Matrícula com validação de vagas, duplicidade, disciplina já cursada no mesmo período, conflito de horários e aprovação anterior (permite refazer disciplinas reprovadas).
 - Cancelamento de matrícula com tentativa de promoção da lista de espera.
 - Entrada, consulta e saída da lista de espera.
 - Portal do aluno baseado no protótipo `prototipo-matricula-5-abas-perfil.html`, com **cinco abas**: **Visão geral**, **Fazer matrícula**, **Lista de espera**, **Disciplinas** e **Carga horária**.
 - Grade semanal acima das ofertas: turmas selecionadas aparecem imediatamente e conflitos de horário ou disciplina são bloqueados; revisão antes de confirmar.
 - Catálogo de disciplinas com ementas, favoritos por aluno e busca/paginação na URL.
 - Cabeçalho com nome completo, curso e semestre do aluno. Cadastro fictício permite escolher curso.
+- Estruturas curriculares diferentes para Sistemas de Informação e Ciência da Computação, com classificação por curso e cálculo de progresso por aprovações, eletivas de perfil excedentes e horas em curso.
 - Testes unitários para IDs de turmas, conflitos de horário e regras acadêmicas.
 
 > **Importante:** esta autenticação é adequada apenas para testar o protótipo local. Ainda faltam recuperação de senha, integração com identidade institucional, controles operacionais mais fortes e auditoria para uso real. Não utilize dados pessoais reais.
@@ -40,11 +41,13 @@ npm.cmd run db:seed
 npm.cmd run dev
 ```
 
-A API fica disponível em `http://localhost:3001`. Se o banco já existir, faça uma cópia de segurança antes de aplicar as migrações. A migração `20261122213000_student_sessions` cria sessões e preserva os alunos antigos sem atribuir senha padrão; a migração `20261122234500_student_course_and_syllabus` adiciona curso opcional aos alunos e ementa às disciplinas. Nenhuma dessas migrações apaga registros.
+A API fica disponível em `http://localhost:3001`. Se o banco já existir, faça uma cópia de segurança antes de aplicar as migrações. A migração `20261122213000_student_sessions` cria sessões e preserva os alunos antigos sem atribuir senha padrão; a migração `20261122234500_student_course_and_syllabus` adiciona curso opcional aos alunos e ementa às disciplinas; a migração `20261123010000_curriculum_history` adiciona estruturas curriculares e histórico de aprovações/reprovações. Nenhuma dessas migrações apaga registros.
 
-**Atualizar um banco existente:** pare o backend, faça backup de `backend/prisma/dev.db`, execute `npx.cmd prisma migrate deploy` dentro de `backend`, depois `npx.cmd prisma generate` e `npm.cmd run db:seed`. O seed é idempotente e adiciona 6 disciplinas / 9 ofertas fictícias sem remover turmas já cadastradas.
+**Atualizar um banco existente:** pare o backend, faça backup de `backend/prisma/dev.db`, execute `npx.cmd prisma migrate deploy` dentro de `backend`, depois `npx.cmd prisma generate` e `npm.cmd run db:seed`. O seed é idempotente e adiciona 2 cursos, 6 disciplinas, 10 ofertas fictícias (incluindo uma lotada) e históricos de demonstração, sem remover turmas já cadastradas.
 
 **Para entrar pela primeira vez:** abra o frontend, clique em **Criar conta**, informe nome completo, curso, matrícula fictícia e senha de pelo menos 8 caracteres; depois use esses dados no formulário **Entrar no sistema**. Contas criadas antes desta mudança não têm senha e não podem usar o login até que recebam uma senha por um procedimento administrativo. Não foi atribuída nenhuma senha padrão a esses alunos.
+
+**Conta pronta para comparar a interface com o protótipo (apenas ambiente local):** matrícula fictícia `DEMO2026`, senha `Demo@12345`. Essa conta representa Ana Carolina Ferreira (Sistemas de Informação) e contém aprovações/reprovação de exemplo para demonstrar as barras de carga horária e o bloqueio de disciplina já aprovada. Não use essas credenciais em uma instalação pública.
 
 Para validar o backend:
 
@@ -75,7 +78,8 @@ Abra `http://localhost:5173`. A API deve estar em execução. Para usar outro se
 | GET | `/api/auth/me` | Verificar sessão |
 | POST | `/api/auth/logout` | Encerrar sessão |
 | GET | `/api/disciplinas` | Disciplinas |
-| GET | `/api/turmas` | Turmas e vagas disponíveis |
+| GET | `/api/turmas` | Turmas, vagas, categoria por curso e disciplina já aprovada |
+| GET | `/api/progresso` | Carga horária exigida, concluída, em curso e restante por grupo |
 | GET | `/api/alunos/:id` | Consulta de aluno de teste |
 | GET | `/api/matriculas?alunoId=1` | Matrículas do aluno |
 | POST | `/api/matriculas` | Criar matrícula |
@@ -100,10 +104,14 @@ Para cancelar uma matrícula ou sair da lista, envie `{ "alunoId": 1 }` no corpo
 
 Esta branch de desenvolvimento está sendo atualizada no GitHub. O GitLab da UFPE não recebe automaticamente esses commits; faça o sincronismo depois de revisar e testar.
 
-## Limites atuais do progresso curricular
+## Requisito adicional e progresso acadêmico
 
-A aba **Carga horária** explica os grupos (obrigatórias, eletivas de perfil e eletivas livres) e mostra apenas a carga horária real das matrículas atuais. O modelo ainda não contém o histórico de aprovações nem a estrutura curricular com metas por curso; por isso, **não exibe percentuais ou horas concluídas fictícias**. A classificação por tipo de disciplina também depende desses dados. Essas são partes obrigatórias do teste prático ainda pendentes.
+Foi escolhida a **verificação de choque de horários**, pois ela evita matrículas impossíveis e melhora a seleção visual na grade semanal. Turmas cujos horários se sobrepõem não podem ser selecionadas juntas, e o backend também recusa a operação.
+
+A aba **Carga horária** usa as metas da estrutura curricular cadastrada para o curso do aluno. Conta apenas disciplinas **aprovadas** no histórico como integralizadas, ignora reprovações e mostra as matrículas atuais separadamente. Horas de eletivas de perfil aprovadas acima da meta podem ser aproveitadas como eletivas livres. Os percentuais são limitados a 100% e as horas restantes nunca são negativas.
+
+Os cursos, metas e históricos fornecidos pelo seed são **fictícios para avaliação técnica**, não reproduzem necessariamente a matriz curricular oficial da UFPE. A área da Secretaria (cadastro de professores, alteração de vagas e gestão de turmas) continua pendente.
 
 ## Próximas etapas
 
-Recuperação de senha e identidade institucional, perfis de secretaria, progresso curricular completo, testes de concorrência e revisão final de acessibilidade.
+Recuperação de senha e identidade institucional, telas e permissões da secretaria, importação de currículos oficiais, testes de concorrência e revisão final de acessibilidade.
