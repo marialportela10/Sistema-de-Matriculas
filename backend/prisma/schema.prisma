@@ -158,4 +158,19 @@ model UsuarioSecretaria {
   usuario   String @unique
   email     String @unique
   senhaHash String
+  sessoes   SessaoSecretaria[]
+}
+
+
+// Sessões administrativas isoladas das sessões dos alunos.
+model SessaoSecretaria {
+  id           Int               @id @default(autoincrement())
+  tokenHash    String            @unique
+  secretariaId Int
+  expiresAt    DateTime
+  criadaEm     DateTime          @default(now())
+  secretaria   UsuarioSecretaria @relation(fields: [secretariaId], references: [id], onDelete: Cascade)
+
+  @@index([secretariaId])
+  @@index([expiresAt])
 }
