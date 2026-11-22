@@ -47,6 +47,7 @@ async function register(suffix: string): Promise<Conta> {
     nome: `Aluno Teste ${suffix}`,
     email: `teste-${suffix}@example.com`,
     numeroMatricula: `TESTE-${suffix}`,
+    curso: "Sistemas de Informação",
     senha: password,
   });
   assert.equal(response.status, 201);
