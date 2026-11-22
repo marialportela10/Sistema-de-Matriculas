@@ -1,12 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
-import { api, ApiError, type Aluno, type Espera, type Matricula, type Turma } from "./api";
+import { api, ApiError, type Aluno, type Espera, type Matricula, type Turma, type Progresso } from "./api";
 import Login from "./Login";
 import "./App.css";
 
 type Aba = "overview" | "enroll" | "wait" | "catalog" | "hours";
 type Aviso = { tipo: "sucesso" | "erro" | "espera"; texto: string };
 type Filtro = "todas" | "favoritas";
-type DisciplinaGrupo = { id: number; nome: string; codigo: string; cargaHoraria: number; ementa: string | null; turmas: Turma[] };
+type FiltroTipo = "todas" | "obrigatoria" | "eletiva-perfil" | "eletiva-livre";
+const TIPOS: Record<Exclude<FiltroTipo, "todas">, string> = {
+  obrigatoria: "Obrigatória", "eletiva-perfil": "Eletiva de perfil", "eletiva-livre": "Eletiva livre",
+};
+type DisciplinaGrupo = { id: number; nome: string; codigo: string; cargaHoraria: number; ementa: string | null; tipo: Turma["classificacao"]; turmas: Turma[] };
 
 const DIAS: Record<number, string> = { 1: "Seg", 2: "Ter", 3: "Qua", 4: "Qui", 5: "Sex", 6: "Sáb", 7: "Dom" };
 const ABAS: ReadonlyArray<{ id: Aba; label: string; icone: string }> = [
@@ -95,6 +99,7 @@ function App() {
   const [turmas, setTurmas] = useState<Turma[]>([]);
   const [matriculas, setMatriculas] = useState<Matricula[]>([]);
   const [esperas, setEsperas] = useState<Espera[]>([]);
+  const [progresso, setProgresso] = useState<Progresso | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [ocupado, setOcupado] = useState(false);
   const [aviso, setAviso] = useState<Aviso | null>(null);
@@ -104,6 +109,7 @@ function App() {
   const [busca, setBusca] = useState(() => new URLSearchParams(window.location.search).get("busca") ?? "");
   const [pagina, setPagina] = useState(() => Math.max(1, Number(new URLSearchParams(window.location.search).get("pagina")) || 1));
   const [filtro, setFiltro] = useState<Filtro>("todas");
+  const [filtroTipo, setFiltroTipo] = useState<FiltroTipo>("todas");
   const [favoritos, setFavoritos] = useState<number[]>(favoritosIniciais);
 
   function falha(error: unknown, alternativa: string) {
@@ -111,6 +117,7 @@ function App() {
       setAluno(null);
       setMatriculas([]);
       setEsperas([]);
+      setProgresso(null);
       setTurmas([]);
       setSelecionadas([]);
       setAviso(null);
@@ -132,12 +139,13 @@ function App() {
   useEffect(() => {
     if (!aluno) return;
     let ativo = true;
-    void Promise.all([api.turmas(), api.matriculas(aluno.id), api.esperas(aluno.id)])
-      .then(([ofertas, inscritas, fila]) => {
+    void Promise.all([api.turmas(), api.matriculas(aluno.id), api.esperas(aluno.id), api.progresso().catch(() => null)])
+      .then(([ofertas, inscritas, fila, andamento]) => {
         if (!ativo) return;
         setTurmas(ofertas);
         setMatriculas(inscritas);
         setEsperas(fila);
+        setProgresso(andamento);
       }).catch((error: unknown) => { if (ativo) falha(error, "Não foi possível carregar seus dados."); })
       .finally(() => { if (ativo) setCarregando(false); });
     const chave = "favoritos-disciplina-" + aluno.numeroMatricula;
@@ -163,10 +171,10 @@ function App() {
     if (!aluno) return;
     setCarregando(true);
     try {
-      const [ofertas, inscritas, fila] = await Promise.all([
-        api.turmas(), api.matriculas(aluno.id), api.esperas(aluno.id),
+      const [ofertas, inscritas, fila, andamento] = await Promise.all([
+        api.turmas(), api.matriculas(aluno.id), api.esperas(aluno.id), api.progresso().catch(() => null),
       ]);
-      setTurmas(ofertas); setMatriculas(inscritas); setEsperas(fila);
+      setTurmas(ofertas); setMatriculas(inscritas); setEsperas(fila); setProgresso(andamento);
     } catch (error) {
       falha(error, "Falha ao atualizar os dados.");
     } finally { setCarregando(false); }
@@ -177,7 +185,7 @@ function App() {
     try {
       await api.sair();
       setAluno(null); setTurmas([]); setMatriculas([]); setEsperas([]);
-      setSelecionadas([]); setAviso(null); setAba("overview");
+      setSelecionadas([]); setAviso(null); setProgresso(null); setAba("overview");
     } catch (error) { falha(error, "Não foi possível sair."); }
     finally { setOcupado(false); }
   }
@@ -191,7 +199,7 @@ function App() {
     for (const turma of turmas) {
       const d = turma.disciplina;
       if (!mapa.has(d.id)) {
-        mapa.set(d.id, { id: d.id, nome: d.nome, codigo: d.codigo, cargaHoraria: d.cargaHoraria, ementa: d.ementa, turmas: [] });
+        mapa.set(d.id, { id: d.id, nome: d.nome, codigo: d.codigo, cargaHoraria: d.cargaHoraria, ementa: d.ementa, tipo: turma.classificacao, turmas: [] });
       }
       mapa.get(d.id)?.turmas.push(turma);
     }
@@ -200,7 +208,8 @@ function App() {
 
   const filtrados = grupos.filter((g) =>
     (g.nome + " " + g.codigo).toLocaleLowerCase("pt-BR").includes(busca.trim().toLocaleLowerCase("pt-BR")) &&
-    (filtro === "todas" || favoritos.includes(g.id)),
+    (filtro === "todas" || favoritos.includes(g.id)) &&
+    (aba !== "catalog" || filtroTipo === "todas" || g.tipo === filtroTipo),
   );
   const totalPaginas = Math.max(1, Math.ceil(filtrados.length / POR_PAGINA));
   const paginaAtual = Math.min(pagina, totalPaginas);
@@ -210,6 +219,7 @@ function App() {
     setAba(nova);
     setBusca("");
     setPagina(1);
+    setFiltroTipo("todas");
     setConflito(null);
     setAviso(null);
     setRevisando(false);
@@ -217,6 +227,10 @@ function App() {
   }
 
   function escolher(turma: Turma) {
+    if (turma.jaAprovada) {
+      setConflito("Você já foi aprovado nesta disciplina. Não é permitido se matricular novamente.");
+      return;
+    }
     const erro = impedimento(turma, [...confirmadas, ...escolhidas]);
     if (erro) { setConflito(erro); setRevisando(false); return; }
     setSelecionadas((lista) => [...lista, turma.id]);
@@ -297,6 +311,14 @@ function App() {
           <input type="search" value={busca} placeholder="Ex.: Introdução à Programação ou IP"
             onChange={(e) => { setBusca(e.target.value); setPagina(1); }} />
         </label>
+        {aba === "catalog" && <label className="campo">Tipo de disciplina
+          <select value={filtroTipo} onChange={(e) => { setFiltroTipo(e.target.value as FiltroTipo); setPagina(1); }}>
+            <option value="todas">Todas</option>
+            <option value="obrigatoria">Obrigatórias</option>
+            <option value="eletiva-perfil">Eletivas de perfil</option>
+            <option value="eletiva-livre">Eletivas livres</option>
+          </select>
+        </label>}
         {aba === "catalog" && <label className="filtro-favoritos">
           <input type="checkbox" checked={filtro === "favoritas"} onChange={(e) => { setFiltro(e.target.checked ? "favoritas" : "todas"); setPagina(1); }} />
           Apenas favoritas
@@ -427,7 +449,7 @@ function App() {
             filtrados.length === 0 ? <div className="vazio"><h3>Nenhuma disciplina encontrada</h3><p>Tente buscar por outro nome ou código.</p></div> :
             <div className="grupos-ofertas">
               {mostrados.map((g) => <section className="grupo" key={g.id}>
-                <div className="grupo-cabecalho"><div><h3>{g.nome}</h3><p>{g.codigo} · {g.cargaHoraria}h</p></div>
+                <div className="grupo-cabecalho"><div><h3>{g.nome}</h3><p>{g.codigo} · {g.cargaHoraria}h · {g.tipo ? TIPOS[g.tipo] : "Categoria a definir"}</p></div>
                   <span className="etiqueta">{g.turmas.length} turma(s)</span></div>
                 <div className="grupo-turmas">
                   {g.turmas.map((t) => {
@@ -438,14 +460,16 @@ function App() {
                     const problema = impedimento(t, [...confirmadas, ...escolhidas]);
                     return <div className="oferta" key={t.id}>
                       <div><strong>Turma {t.codigo}</strong><small>{t.professor || "Professor a definir"} · {t.id}</small></div>
-                      <div><strong>{horas(t)}</strong><small>{g.cargaHoraria} horas</small></div>
-                      <div>{confirmada ? <span className="etiqueta etiqueta-ok">Matriculada</span> :
+                      <div><strong>{horas(t)}</strong><small>{g.cargaHoraria}h · {g.tipo ? TIPOS[g.tipo] : "Categoria a definir"}</small></div>
+                      <div>{t.jaAprovada ? <span className="etiqueta etiqueta-ok">Já concluída</span> :
+                        confirmada ? <span className="etiqueta etiqueta-ok">Matriculada</span> :
                         marcada ? <span className="etiqueta etiqueta-espera">Selecionada</span> :
                         semVagas ? <span className="etiqueta etiqueta-lotada">Turma lotada</span> :
                         problema ? <span className="etiqueta etiqueta-erro">Conflito de horário</span> :
                         <span className="etiqueta etiqueta-ok">{t.vagasDisponiveis} vaga(s)</span>}</div>
                       <div className="oferta-acoes">
-                        {confirmada ? <span className="etiqueta etiqueta-ok">Ativa</span> :
+                        {t.jaAprovada ? <span className="etiqueta">Já aprovada</span> :
+                          confirmada ? <span className="etiqueta etiqueta-ok">Ativa</span> :
                           marcada ? <button type="button" className="botao-claro" disabled={ocupado} onClick={() => removerEscolha(t.id)}>Remover seleção</button> :
                           naFila ? <span className="etiqueta etiqueta-espera">Na espera</span> :
                           semVagas ? <button type="button" className="botao-contorno" disabled={ocupado} onClick={() => void entrarNaEspera(t)}>Entrar na espera</button> :
@@ -489,7 +513,7 @@ function App() {
                   <button type="button" className={"favorito " + (favoritos.includes(g.id) ? "favoritado" : "")}
                     aria-pressed={favoritos.includes(g.id)} aria-label={(favoritos.includes(g.id) ? "Remover dos favoritos: " : "Favoritar disciplina: ") + g.nome}
                     onClick={() => favoritar(g.id)}>{favoritos.includes(g.id) ? "♥" : "♡"}</button></div>
-                <div className="disciplina-etiquetas"><span className="etiqueta">{g.cargaHoraria} horas</span><span className="etiqueta">{g.turmas.length} turma(s) ofertada(s)</span></div>
+                <div className="disciplina-etiquetas"><span className="etiqueta">{g.tipo ? TIPOS[g.tipo] : "Categoria a definir"}</span><span className="etiqueta">{g.cargaHoraria} horas</span></div>
                 <details className="ementa"><summary>Ler ementa e conteúdo da disciplina</summary>
                   <p>{g.ementa || "Ementa ainda não cadastrada pela coordenação."}</p></details>
               </article>)}
