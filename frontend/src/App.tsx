@@ -347,7 +347,7 @@ function App() {
       <a className="pular" href="#conteudo">Pular para o conteúdo</a>
       <header className="topo">
         <div className="topo-interno">
-          <div className="marca"><span className="marca-icone" aria-hidden="true">▱</span> Matrícula Clara</div>
+          <div className="marca"><span className="marca-icone" aria-hidden="true">▱</span> Sistema de Matrícula</div>
           <div className="topo-direita">
             <span className="semestre">{periodo}</span>
             <div className="perfil">
