@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
-import { api, type Aluno } from "./api";
+import { api, type Aluno, type CursoOpcao } from "./api";
 import "./Login.css";
 
 type Props = { onEntrar: (aluno: Aluno) => void };
@@ -9,12 +9,20 @@ export default function Login({ onEntrar }: Props) {
   const [cadastrando, setCadastrando] = useState(false);
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
-  const [curso, setCurso] = useState("Sistemas de Informação");
+  const [curso, setCurso] = useState("");
+  const [cursos, setCursos] = useState<CursoOpcao[]>([]);
   const [numeroMatricula, setNumeroMatricula] = useState("");
   const [senha, setSenha] = useState("");
   const [mostrarSenha, setMostrarSenha] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(false);
+
+  useEffect(() => {
+    let ativo = true;
+    void api.cursos().then((dados) => { if (ativo) setCursos(dados); })
+      .catch(() => { /* O erro também será mostrado se o aluno tentar cadastrar. */ });
+    return () => { ativo = false; };
+  }, []);
 
   async function enviar(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -72,11 +80,14 @@ export default function Login({ onEntrar }: Props) {
                   value={nome} onChange={(event) => setNome(event.target.value)}
                   placeholder="Seu nome" required />
 
-                <label htmlFor="login-curso">Curso</label>
-                <select id="login-curso" value={curso} onChange={(event) => setCurso(event.target.value)} required>
-                  <option value="Sistemas de Informação">Sistemas de Informação</option>
-                  <option value="Ciência da Computação">Ciência da Computação</option>
-                </select>
+                <label htmlFor="login-curso">Nome do curso</label>
+                <input id="login-curso" type="text" list="login-cursos" autoComplete="off"
+                  maxLength={120} value={curso} onChange={(event) => setCurso(event.target.value)}
+                  placeholder="Ex.: Sistemas de Informação" required />
+                <datalist id="login-cursos">
+                  {cursos.map((item) => <option key={item.id} value={item.nome} />)}
+                </datalist>
+                <p className="login-ajuda">Digite ou selecione um curso já cadastrado no sistema.</p>
 
                 <label htmlFor="login-email">E-mail</label>
                 <input id="login-email" type="email" autoComplete="email" maxLength={254}
