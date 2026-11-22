@@ -4,10 +4,12 @@ import { prisma } from "./database/prisma.js";
 import { alunosRouter } from "./routes/alunos.js";
 import { matriculasRouter } from "./routes/matriculas.js";
 import { listaEsperaRouter } from "./routes/lista-espera.js";
+import { authRouter } from "./routes/auth.js";
+import { exigirAutenticacao } from "./services/auth.js";
 
 export const app = express();
 
-app.use(cors({ origin: "http://localhost:5173" }));
+app.use(cors({ origin: "http://localhost:5173", credentials: true }));
 app.use(express.json());
 
 app.get("/api/health", (_req, res) => {
@@ -15,6 +17,14 @@ app.get("/api/health", (_req, res) => {
     status: "ok",
     service: "sistema-de-matriculas-api",
   });
+});
+
+// Apenas as rotas de autenticação e de saúde são públicas.
+app.use("/api/auth", authRouter);
+app.use("/api", exigirAutenticacao);
+app.use("/api", (_req, res, next) => {
+  res.setHeader("Cache-Control", "no-store");
+  next();
 });
 
 // Lista as disciplinas cadastradas.
