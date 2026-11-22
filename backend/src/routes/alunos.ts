@@ -48,3 +48,23 @@ alunosRouter.post("/", async (req, res, next) => {
     next(error);
   }
 });
+
+// Consulta um aluno ja cadastrado (identificacao temporaria para o prototipo).
+alunosRouter.get("/:id", async (req, res, next) => {
+  const id = Number(req.params.id);
+  if (!Number.isSafeInteger(id) || id <= 0) {
+    res.status(400).json({ error: "Informe um id de aluno valido." });
+    return;
+  }
+
+  try {
+    const aluno = await prisma.aluno.findUnique({ where: { id } });
+    if (!aluno) {
+      res.status(404).json({ error: "Aluno nao encontrado." });
+      return;
+    }
+    res.json(aluno);
+  } catch (error) {
+    next(error);
+  }
+});
