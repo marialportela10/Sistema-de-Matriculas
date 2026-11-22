@@ -37,18 +37,23 @@ authRouter.post("/register", async (req, res, next) => {
   }
 
   try {
+    const cursoExistente = await prisma.curso.findUnique({ where: { nome: curso.trim() } });
+    if (!cursoExistente || !["SI", "CC"].includes(cursoExistente.codigo)) {
+      res.status(400).json({ error: "Selecione um curso válido da lista." });
+      return;
+    }
     const aluno = await prisma.aluno.create({
       data: {
         nome: nome.trim(),
         email: email.trim().toLowerCase(),
         numeroMatricula: numeroMatricula.trim(),
         senhaHash: await gerarHashSenha(senha),
-        curso: curso.trim(),
+        cursoId: cursoExistente.id,
       },
-      select: { id: true, nome: true, email: true, numeroMatricula: true, curso: true },
+      select: { id: true, nome: true, email: true, numeroMatricula: true, curso: { select: { nome: true } } },
     });
     await abrirSessao(res, aluno.id);
-    res.status(201).json(aluno);
+    res.status(201).json({ ...aluno, curso: aluno.curso.nome });
   } catch (error) {
     if (typeof error === "object" && error !== null && "code" in error && error.code === "P2002") {
       res.status(409).json({ error: "E-mail ou número de matrícula já cadastrado." });
@@ -79,6 +84,7 @@ authRouter.post("/login", async (req, res, next) => {
   try {
     const aluno = await prisma.aluno.findUnique({
       where: { numeroMatricula: numeroMatricula.trim() },
+      include: { curso: { select: { nome: true } } },
     });
     const valida = await verificarSenha(senha, aluno?.senhaHash ?? null);
     if (!aluno || !valida) {
@@ -90,7 +96,7 @@ authRouter.post("/login", async (req, res, next) => {
 
     tentativas.delete(chave);
     await abrirSessao(res, aluno.id);
-    res.json({ id: aluno.id, nome: aluno.nome, email: aluno.email, numeroMatricula: aluno.numeroMatricula, curso: aluno.curso });
+    res.json({ id: aluno.id, nome: aluno.nome, email: aluno.email, numeroMatricula: aluno.numeroMatricula, curso: aluno.curso.nome });
   } catch (error) {
     next(error);
   }
@@ -103,7 +109,7 @@ authRouter.get("/me", async (req, res, next) => {
       res.status(401).json({ error: "Sessão não encontrada ou expirada." });
       return;
     }
-    res.json(sessao.aluno);
+    res.json({ ...sessao.aluno, curso: sessao.aluno.curso.nome });
   } catch (error) {
     next(error);
   }
