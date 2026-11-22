@@ -26,10 +26,10 @@ listaEsperaRouter.get("/", async (req, res, next) => {
   try {
     const registros = await prisma.listaEspera.findMany({
       where: { alunoId },
-      include: { turma: { include: { disciplina: true, horarios: true } } },
+      include: { turma: { include: { disciplina: true, horarios: true, docente: true } } },
       orderBy: [{ criadaEm: "asc" }, { id: "asc" }],
     });
-    res.json(registros);
+    res.json(registros.map((r) => ({ ...r, turma: { ...r.turma, professor: r.turma.docente.nome } })));
   } catch (error) {
     next(error);
   }
@@ -60,7 +60,7 @@ listaEsperaRouter.post("/", async (req, res, next) => {
         where: { id: turmaId },
         include: {
           horarios: true,
-          _count: { select: { matriculas: true } },
+          _count: { select: { matriculas: { where: { situacao: "ATIVA" } } } },
         },
       });
       if (!turma) throw new ErroDaFila(404, "Turma nao encontrada.");
@@ -75,7 +75,7 @@ listaEsperaRouter.post("/", async (req, res, next) => {
       }
 
       const atuais = await tx.matricula.findMany({
-        where: { alunoId, turma: { periodo: turma.periodo } },
+        where: { alunoId, situacao: "ATIVA", turma: { periodo: turma.periodo } },
         include: { turma: { include: { horarios: true } } },
       });
       const impedimento = impedimentoAcademico(turma, atuais);
