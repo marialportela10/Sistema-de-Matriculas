@@ -27,7 +27,8 @@ type Lista<T> = { items: T[]; total: number; pagina: number; totalPaginas: numbe
 type Disciplina = { id: number; codigo: string; nome: string; cargaHoraria: number };
 type Professor = { id: number; nome: string; email: string };
 type Turma = { id: string; codigo: string; capacidade: number; ocupadas: number;
-  vagasDisponiveis: number; disciplinaId: number; professorId: number };
+  vagasDisponiveis: number; disciplinaId: number; professorId: number;
+  horarios: Array<{ diaSemana: number; inicio: string; fim: string }> };
 type Aluno = { id: number; numeroMatricula: string };
 
 async function run() {
@@ -104,7 +105,10 @@ async function run() {
   const turmaDados = {
     disciplinaId: criada.data.id, professorId: novaProfessora.data.id,
     codigo: "A", capacidade: 2,
-    horarios: [{ diaSemana: 2, inicio: "18:00", fim: "20:00" }],
+    horarios: [
+      { diaSemana: 2, inicio: "18:00", fim: "20:00" },
+      { diaSemana: 4, inicio: "18:00", fim: "20:00" },
+    ],
   };
   assert.equal((await call("POST", "/api/admin/turmas", {
     ...turmaDados, capacidade: 0,
@@ -114,6 +118,15 @@ async function run() {
   }, adminCookie)).status, 404);
   assert.equal((await call("POST", "/api/admin/turmas", {
     ...turmaDados, horarios: [{ diaSemana: 8, inicio: "10:00", fim: "12:00" }],
+  }, adminCookie)).status, 400);
+  assert.equal((await call("POST", "/api/admin/turmas", {
+    ...turmaDados, horarios: [
+      { diaSemana: 2, inicio: "18:00", fim: "20:00" },
+      { diaSemana: 2, inicio: "19:00", fim: "21:00" },
+    ],
+  }, adminCookie)).status, 400);
+  assert.equal((await call("POST", "/api/admin/turmas", {
+    ...turmaDados, horarios: [{ diaSemana: 2, inicio: "20:00", fim: "18:00" }],
   }, adminCookie)).status, 400);
   for (const invalida of ["AB", "12", "A123", "A1B", ""]) {
     assert.equal((await call("POST", "/api/admin/turmas", {
@@ -130,6 +143,11 @@ async function run() {
   assert.equal(turma.status, 201);
   assert.match(turma.data.id, /^[A-Z]{2}\d{4}$/);
   assert.equal(turma.data.capacidade, 2);
+  assert.equal(turma.data.horarios.length, 2);
+  assert.ok(turma.data.horarios.some((h) => h.diaSemana === 2 &&
+    h.inicio === "18:00" && h.fim === "20:00"));
+  assert.ok(turma.data.horarios.some((h) => h.diaSemana === 4 &&
+    h.inicio === "18:00" && h.fim === "20:00"));
   assert.equal((await call("POST", "/api/admin/turmas", turmaDados, adminCookie)).status, 409);
   // Também aceita letra + 1 número ou letra + 2 números; normaliza minúsculas.
   const comNumero = await call<Turma>("POST", "/api/admin/turmas", {
