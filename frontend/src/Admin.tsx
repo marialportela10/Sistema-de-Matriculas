@@ -315,22 +315,34 @@ export default function Admin({ secretaria, onSair, onExpirada }: {
                   <input id="turma-vagas" type="number" min={1} step={1} required value={capacidadeT}
                     onChange={(e) => setCapacidadeT(e.target.value)} /></div>
               </div>
-              <fieldset className="admin-horarios"><legend>Horários semanais</legend>
+              <fieldset className="admin-horarios" aria-describedby="admin-horarios-ajuda">
+                <legend>Dias e horários das aulas</legend>
+                <p id="admin-horarios-ajuda" className="admin-horarios-ajuda">
+                  Defina quando o professor ministrará as aulas desta turma. Essa programação é diferente
+                  da carga horária total da disciplina indicada acima.
+                </p>
                 {horarios.map((h, i) => <div className="admin-horario" key={i}>
-                  <label>Dia
-                    <select value={h.diaSemana} aria-label={"Dia do horário " + (i + 1)}
+                  <label>Dia da semana
+                    <select value={h.diaSemana} aria-label={"Dia da semana da aula " + (i + 1)}
                       onChange={(e) => setHorarios((lista) => lista.map((item, n) => n === i ? { ...item, diaSemana: Number(e.target.value) } : item))}>
                       {DIAS.slice(1).map((dia, n) => <option key={dia} value={n + 1}>{dia}</option>)}
                     </select></label>
-                  <label>Início<input type="time" required aria-label={"Início do horário " + (i + 1)}
+                  <label>Início da aula<input type="time" required aria-label={"Início da aula " + (i + 1)}
                     value={h.inicio} onChange={(e) => setHorarios((lista) => lista.map((item, n) => n === i ? { ...item, inicio: e.target.value } : item))} /></label>
-                  <label>Fim<input type="time" required aria-label={"Fim do horário " + (i + 1)}
+                  <label>Fim da aula<input type="time" required aria-label={"Fim da aula " + (i + 1)}
                     value={h.fim} onChange={(e) => setHorarios((lista) => lista.map((item, n) => n === i ? { ...item, fim: e.target.value } : item))} /></label>
                   {horarios.length > 1 && <button className="admin-remove" type="button" aria-label={"Remover horário " + (i + 1)}
                     onClick={() => setHorarios((lista) => lista.filter((_, n) => n !== i))}>×</button>}
                 </div>)}
                 <button type="button" className="botao-claro" disabled={horarios.length >= 10}
-                  onClick={() => setHorarios((lista) => [...lista, HORARIO_INICIAL()])}>+ Adicionar horário</button>
+                  onClick={() => setHorarios((lista) => [...lista, HORARIO_INICIAL()])}>+ Adicionar dia e horário</button>
+                <div className="admin-resumo-aulas">
+                  <strong>Horários previstos para a turma</strong>
+                  <ul>
+                    {[...horarios].sort((a, b) => a.diaSemana - b.diaSemana || a.inicio.localeCompare(b.inicio))
+                      .map((h, i) => <li key={i}>{DIAS[h.diaSemana]}: {h.inicio}–{h.fim}</li>)}
+                  </ul>
+                </div>
               </fieldset>
               <button className="botao-primario" type="submit" disabled={ocupado || cargaHorariaInvalida || !opcoes.disciplinas.length || !opcoes.professores.length}>
                 {ocupado ? "Salvando…" : "Abrir turma"}
