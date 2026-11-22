@@ -95,20 +95,39 @@ function App() {
   }
 
   useEffect(() => {
-    void carregarTurmas();
+    let ativo = true;
+    void api.turmas().then((dados) => {
+      if (ativo) setTurmas(dados);
+    }).catch((error: unknown) => {
+      if (ativo) setAviso({ tipo: "erro", texto: error instanceof Error ? error.message : "Erro ao carregar turmas." });
+    }).finally(() => {
+      if (ativo) setCarregando(false);
+    });
+
     const salvo = Number(localStorage.getItem("alunoId"));
     if (Number.isSafeInteger(salvo) && salvo > 0) {
-      void api.aluno(salvo).then(setAluno).catch(() => {
+      void api.aluno(salvo).then((dados) => {
+        if (ativo) setAluno(dados);
+      }).catch(() => {
         localStorage.removeItem("alunoId");
       });
     }
+    return () => { ativo = false; };
   }, []);
 
   useEffect(() => {
     if (!aluno) return;
-    void atualizarDadosAluno(aluno.id).catch((error: unknown) => {
-      setAviso({ tipo: "erro", texto: error instanceof Error ? error.message : "Erro ao buscar matrículas." });
-    });
+    let ativo = true;
+    void Promise.all([api.matriculas(aluno.id), api.esperas(aluno.id)])
+      .then(([novasMatriculas, novasEsperas]) => {
+        if (ativo) {
+          setMatriculas(novasMatriculas);
+          setEsperas(novasEsperas);
+        }
+      }).catch((error: unknown) => {
+        if (ativo) setAviso({ tipo: "erro", texto: error instanceof Error ? error.message : "Erro ao buscar matrículas." });
+      });
+    return () => { ativo = false; };
   }, [aluno]);
 
   useEffect(() => {
