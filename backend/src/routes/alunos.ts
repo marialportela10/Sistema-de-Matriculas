@@ -3,64 +3,43 @@ import { prisma } from "../database/prisma.js";
 
 export const alunosRouter = Router();
 
-// Lista os alunos cadastrados.
-alunosRouter.get("/", async (_req, res) => {
-  const alunos = await prisma.aluno.findMany({
-    orderBy: { nome: "asc" },
-  });
+const dadosPublicos = {
+  id: true,
+  nome: true,
+  email: true,
+  numeroMatricula: true,
+} as const;
 
-  res.json(alunos);
-});
-
-// Cadastra um aluno para testar as operacoes de matricula.
-alunosRouter.post("/", async (req, res, next) => {
-  const { nome, email, numeroMatricula } = req.body ?? {};
-
-  if (
-    typeof nome !== "string" || !nome.trim() ||
-    typeof email !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) ||
-    typeof numeroMatricula !== "string" || !numeroMatricula.trim()
-  ) {
-    res.status(400).json({ error: "Informe nome, email valido e numeroMatricula." });
-    return;
-  }
-
+// Nenhum aluno pode consultar a conta de outra pessoa.
+alunosRouter.get("/", async (_req, res, next) => {
   try {
-    const aluno = await prisma.aluno.create({
-      data: {
-        nome: nome.trim(),
-        email: email.trim().toLowerCase(),
-        numeroMatricula: numeroMatricula.trim(),
-      },
+    const aluno = await prisma.aluno.findUnique({
+      where: { id: res.locals.alunoId },
+      select: dadosPublicos,
     });
-
-    res.status(201).json(aluno);
+    res.json(aluno ? [aluno] : []);
   } catch (error) {
-    if (
-      typeof error === "object" &&
-      error !== null &&
-      "code" in error &&
-      error.code === "P2002"
-    ) {
-      res.status(409).json({ error: "Email ou numero de matricula ja cadastrado." });
-      return;
-    }
     next(error);
   }
 });
 
-// Consulta um aluno ja cadastrado (identificacao temporaria para o prototipo).
 alunosRouter.get("/:id", async (req, res, next) => {
   const id = Number(req.params.id);
   if (!Number.isSafeInteger(id) || id <= 0) {
-    res.status(400).json({ error: "Informe um id de aluno valido." });
+    res.status(400).json({ error: "Informe um ID de aluno válido." });
     return;
   }
-
+  if (id !== res.locals.alunoId) {
+    res.status(403).json({ error: "Você só pode consultar sua própria conta." });
+    return;
+  }
   try {
-    const aluno = await prisma.aluno.findUnique({ where: { id } });
+    const aluno = await prisma.aluno.findUnique({
+      where: { id },
+      select: dadosPublicos,
+    });
     if (!aluno) {
-      res.status(404).json({ error: "Aluno nao encontrado." });
+      res.status(404).json({ error: "Aluno não encontrado." });
       return;
     }
     res.json(aluno);
