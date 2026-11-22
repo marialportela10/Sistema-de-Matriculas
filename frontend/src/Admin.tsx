@@ -223,7 +223,7 @@ export default function Admin({ secretaria, onSair, onExpirada }: {
                   <thead><tr><th>Turma</th><th>Disciplina e professor</th><th>Ocupação</th><th>Alterar vagas</th></tr></thead>
                   <tbody>{turmas.items.map((t) =>
                     <tr key={t.id}>
-                      <td><strong>{t.id}</strong><small>Seção {t.codigo} · {t.periodo}</small></td>
+                      <td><strong>{t.id}</strong><small>Turma {t.codigo} · {t.periodo}</small></td>
                       <td><strong>{t.disciplina.nome}</strong><small>{t.docente.nome}</small>
                         <small>{t.horarios.map((h) => DIAS[h.diaSemana] + " " + h.inicio + "–" + h.fim).join(" · ")}</small></td>
                       <td><span className="admin-ocupacao">{t.ocupadas}/{t.capacidade}</span>
@@ -291,9 +291,12 @@ export default function Admin({ secretaria, onSair, onExpirada }: {
                 {opcoes.professores.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
               </select>
               <div className="admin-duas-colunas">
-                <div><label htmlFor="turma-secao">Seção</label>
-                  <input id="turma-secao" required maxLength={10} value={codigoT}
-                    onChange={(e) => setCodigoT(e.target.value)} placeholder="A" /></div>
+                <div><label htmlFor="turma-secao">Turma (letra e até 2 números)</label>
+                  <input id="turma-secao" required maxLength={3} pattern="[A-Za-z][0-9]{0,2}"
+                    title="Use uma letra e, opcionalmente, um ou dois números: A, A1 ou A12."
+                    aria-describedby="turma-formato" value={codigoT}
+                    onChange={(e) => setCodigoT(e.target.value.toUpperCase())} placeholder="Ex.: A12" />
+                  <small id="turma-formato" className="admin-campo-ajuda">Ex.: A, A1 ou A12</small></div>
                 <div><label htmlFor="turma-vagas">Total de vagas</label>
                   <input id="turma-vagas" type="number" min={1} step={1} required value={capacidadeT}
                     onChange={(e) => setCapacidadeT(e.target.value)} /></div>
