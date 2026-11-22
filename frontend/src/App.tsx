@@ -88,6 +88,17 @@ function Schedule({ confirmadas, escolhidas }: { confirmadas: Turma[]; escolhida
   );
 }
 
+async function lerProgresso(): Promise<{ dados: Progresso | null; erro: string | null }> {
+  try {
+    return { dados: await api.progresso(), erro: null };
+  } catch (error) {
+    return {
+      dados: null,
+      erro: error instanceof Error ? error.message : "Não foi possível consultar o progresso curricular.",
+    };
+  }
+}
+
 function favoritosIniciais(): number[] {
   return [];
 }
@@ -100,6 +111,7 @@ function App() {
   const [matriculas, setMatriculas] = useState<Matricula[]>([]);
   const [esperas, setEsperas] = useState<Espera[]>([]);
   const [progresso, setProgresso] = useState<Progresso | null>(null);
+  const [erroProgresso, setErroProgresso] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [ocupado, setOcupado] = useState(false);
   const [aviso, setAviso] = useState<Aviso | null>(null);
@@ -118,6 +130,7 @@ function App() {
       setMatriculas([]);
       setEsperas([]);
       setProgresso(null);
+      setErroProgresso(null);
       setTurmas([]);
       setSelecionadas([]);
       setAviso(null);
@@ -139,13 +152,14 @@ function App() {
   useEffect(() => {
     if (!aluno) return;
     let ativo = true;
-    void Promise.all([api.turmas(), api.matriculas(aluno.id), api.esperas(aluno.id), api.progresso().catch(() => null)])
+    void Promise.all([api.turmas(), api.matriculas(aluno.id), api.esperas(aluno.id), lerProgresso()])
       .then(([ofertas, inscritas, fila, andamento]) => {
         if (!ativo) return;
         setTurmas(ofertas);
         setMatriculas(inscritas);
         setEsperas(fila);
-        setProgresso(andamento);
+        setProgresso(andamento.dados);
+        setErroProgresso(andamento.erro);
       }).catch((error: unknown) => { if (ativo) falha(error, "Não foi possível carregar seus dados."); })
       .finally(() => { if (ativo) setCarregando(false); });
     const chave = "favoritos-disciplina-" + aluno.numeroMatricula;
@@ -172,9 +186,10 @@ function App() {
     setCarregando(true);
     try {
       const [ofertas, inscritas, fila, andamento] = await Promise.all([
-        api.turmas(), api.matriculas(aluno.id), api.esperas(aluno.id), api.progresso().catch(() => null),
+        api.turmas(), api.matriculas(aluno.id), api.esperas(aluno.id), lerProgresso(),
       ]);
-      setTurmas(ofertas); setMatriculas(inscritas); setEsperas(fila); setProgresso(andamento);
+      setTurmas(ofertas); setMatriculas(inscritas); setEsperas(fila);
+      setProgresso(andamento.dados); setErroProgresso(andamento.erro);
     } catch (error) {
       falha(error, "Falha ao atualizar os dados.");
     } finally { setCarregando(false); }
@@ -185,7 +200,7 @@ function App() {
     try {
       await api.sair();
       setAluno(null); setTurmas([]); setMatriculas([]); setEsperas([]);
-      setSelecionadas([]); setAviso(null); setProgresso(null); setAba("overview");
+      setSelecionadas([]); setAviso(null); setProgresso(null); setErroProgresso(null); setAba("overview");
     } catch (error) { falha(error, "Não foi possível sair."); }
     finally { setOcupado(false); }
   }
@@ -374,6 +389,8 @@ function App() {
         {aviso && <div className={"aviso aviso-" + aviso.tipo} role={aviso.tipo === "erro" ? "alert" : "status"}>
           <strong>{aviso.tipo === "erro" ? "Atenção" : aviso.tipo === "espera" ? "Lista de espera" : "Tudo certo!"}</strong>
           <span>{aviso.texto}</span>
+          {aviso.tipo === "erro" && <button className="aviso-repetir" type="button"
+            onClick={() => { setAviso(null); void recarregar(); }}>Tentar novamente</button>}
           <button type="button" onClick={() => setAviso(null)} aria-label="Fechar aviso">×</button>
         </div>}
 
@@ -566,8 +583,12 @@ function App() {
                 <details><summary>O que conta como carga horária concluída?</summary><p>Somente disciplinas aprovadas em semestres anteriores. Horas em andamento são exibidas separadamente.</p></details>
               </div>
             </section>
-          </> : <div className="vazio"><h3>Progresso curricular indisponível</h3>
-            <p>Ainda não há estrutura curricular associada ao seu curso. Confira o curso registrado no seu perfil.</p></div>}
+          </> : <div className="vazio" role={erroProgresso ? "alert" : undefined}>
+            <h3>Não foi possível carregar o progresso curricular</h3>
+            <p>{erroProgresso || "Seu curso não possui estrutura curricular cadastrada."}</p>
+            <button type="button" className="botao-contorno" disabled={carregando}
+              onClick={() => void recarregar()}>Tentar novamente</button>
+          </div>}
         </>}
       </main>
       <footer className="rodape">Sistema de Matrícula · Protótipo acadêmico · Dados de demonstração</footer>
