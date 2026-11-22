@@ -392,7 +392,9 @@ function App() {
               <div className="cabecalho-secao"><h2>Minhas turmas do semestre</h2><span className="etiqueta">Situação atual</span></div>
               {carregando ? <p role="status">Carregando turmas…</p> : matriculas.length ? matriculas.map((m) => (
                 <div className="linha" key={m.id}><div><strong>{m.turma.disciplina.nome}</strong><p>Turma {m.turma.codigo} · {horas(m.turma as Turma)} · {m.turma.disciplina.cargaHoraria}h</p></div>
-                  <span className="etiqueta etiqueta-ok">Ativa</span></div>
+                  <div className="acoes-registro"><span className="etiqueta etiqueta-ok">Ativa</span>
+                    <button type="button" className="botao-claro" disabled={ocupado}
+                      onClick={() => void cancelarRegistro(m.id, "matricula")}>Cancelar matrícula</button></div></div>
               )) : <div className="vazio"><h3>Nenhuma turma matriculada</h3><p>Monte sua grade na aba Fazer matrícula e confirme as escolhas.</p>
                 <button type="button" className="botao-primario" onClick={() => navegar("enroll")}>Buscar turmas</button></div>}
             </section>
