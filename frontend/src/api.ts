@@ -64,6 +64,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   try {
     resposta = await fetch(`${API_URL}${path}`, {
       ...options,
+      credentials: "include",
       headers: { "Content-Type": "application/json", ...options.headers },
     });
   } catch {
@@ -84,9 +85,16 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
 export const api = {
   turmas: () => request<Turma[]>("/api/turmas"),
-  aluno: (id: number) => request<Aluno>(`/api/alunos/${id}`),
-  cadastrarAluno: (data: Omit<Aluno, "id">) =>
-    request<Aluno>("/api/alunos", { method: "POST", body: JSON.stringify(data) }),
+  sessao: () => request<Aluno>("/api/auth/me"),
+  entrar: (numeroMatricula: string, senha: string) =>
+    request<Aluno>("/api/auth/login", {
+      method: "POST", body: JSON.stringify({ numeroMatricula, senha }),
+    }),
+  cadastrarConta: (data: Omit<Aluno, "id"> & { senha: string }) =>
+    request<Aluno>("/api/auth/register", {
+      method: "POST", body: JSON.stringify(data),
+    }),
+  sair: () => request<void>("/api/auth/logout", { method: "POST" }),
   matriculas: (alunoId: number) =>
     request<Matricula[]>(`/api/matriculas?alunoId=${alunoId}`),
   esperas: (alunoId: number) =>
