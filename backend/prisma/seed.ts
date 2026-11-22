@@ -4,8 +4,9 @@ import { prisma } from "../src/database/prisma.js";
 async function seed() {
   const ip = await prisma.disciplina.upsert({
     where: { codigo: "IP" },
-    update: {},
+    update: { ementa: "Fundamentos de programação, algoritmos, variáveis, estruturas de decisão, laços de repetição e funções." },
     create: {
+      ementa: "Fundamentos de programação, algoritmos, variáveis, estruturas de decisão, laços de repetição e funções.",
       codigo: "IP",
       nome: "Introdução à Programação",
       cargaHoraria: 60,
@@ -14,8 +15,9 @@ async function seed() {
 
   const edoo = await prisma.disciplina.upsert({
     where: { codigo: "EDOO" },
-    update: {},
+    update: { ementa: "Listas ligadas, pilhas, filas, estruturas de dados e conceitos de orientação a objetos." },
     create: {
+      ementa: "Listas ligadas, pilhas, filas, estruturas de dados e conceitos de orientação a objetos.",
       codigo: "EDOO",
       nome: "Estruturas de Dados e Orientação a Objetos",
       cargaHoraria: 60,
