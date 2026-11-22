@@ -5,6 +5,7 @@ export type Aluno = {
   nome: string;
   email: string;
   numeroMatricula: string;
+  curso: string | null;
 };
 
 export type Disciplina = {
@@ -12,6 +13,7 @@ export type Disciplina = {
   codigo: string;
   nome: string;
   cargaHoraria: number;
+  ementa: string | null;
 };
 
 export type Horario = {
