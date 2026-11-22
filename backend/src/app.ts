@@ -56,8 +56,9 @@ app.get("/api/turmas", async (_req, res) => {
     prisma.turma.findMany({
       include: {
         disciplina: true,
+        docente: true,
         horarios: true,
-        _count: { select: { matriculas: true, listaEspera: true } },
+        _count: { select: { matriculas: { where: { situacao: "ATIVA" } }, listaEspera: true } },
       },
       orderBy: { id: "asc" },
     }),
