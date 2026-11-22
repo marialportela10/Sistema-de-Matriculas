@@ -20,6 +20,7 @@ model Aluno {
   sessoes         Sessao[]
   matriculas      Matricula[]
   listaEspera     ListaEspera[]
+  historico       Historico[]
 }
 
 // Uma disciplina pode oferecer varias turmas.
@@ -30,6 +31,8 @@ model Disciplina {
   cargaHoraria Int
   ementa       String?
   turmas       Turma[]
+  curriculos   CurriculoDisciplina[]
+  historico    Historico[]
 }
 
 // Uma turma pertence a exatamente uma disciplina.
@@ -93,4 +96,42 @@ model Sessao {
 
   @@index([alunoId])
   @@index([expiresAt])
+}
+
+
+// Metas reais por curso, e classificacao contextual por disciplina.
+model Curso {
+  id            Int                   @id @default(autoincrement())
+  codigo        String                @unique
+  nome          String                @unique
+  chObrigatorias Int
+  chPerfil      Int
+  chLivre       Int
+  curriculos    CurriculoDisciplina[]
+}
+
+model CurriculoDisciplina {
+  id           Int        @id @default(autoincrement())
+  cursoId      Int
+  disciplinaId Int
+  tipo         String
+  curso        Curso      @relation(fields: [cursoId], references: [id])
+  disciplina   Disciplina @relation(fields: [disciplinaId], references: [id])
+
+  @@unique([cursoId, disciplinaId])
+  @@index([disciplinaId])
+}
+
+// Historico anterior ao semestre atual: aprovada ou reprovada.
+model Historico {
+  id           Int        @id @default(autoincrement())
+  alunoId      Int
+  disciplinaId Int
+  periodo      String
+  situacao     String
+  aluno        Aluno      @relation(fields: [alunoId], references: [id])
+  disciplina   Disciplina @relation(fields: [disciplinaId], references: [id])
+
+  @@unique([alunoId, disciplinaId, periodo])
+  @@index([alunoId, situacao])
 }
