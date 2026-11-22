@@ -16,7 +16,8 @@ model Aluno {
   email           String        @unique
   numeroMatricula String        @unique
   senhaHash       String?
-  curso           String?
+  cursoId         Int
+  curso           Curso          @relation(fields: [cursoId], references: [id])
   sessoes         Sessao[]
   matriculas      Matricula[]
   listaEspera     ListaEspera[]
@@ -41,12 +42,13 @@ model Turma {
   codigo       String
   periodo      String
   capacidade   Int
-  professor    String?
   disciplinaId Int
   disciplina   Disciplina     @relation(fields: [disciplinaId], references: [id])
   horarios     HorarioTurma[]
   matriculas   Matricula[]
   listaEspera  ListaEspera[]
+  professorId  Int
+  docente      Professor        @relation(fields: [professorId], references: [id])
 
   @@unique([disciplinaId, codigo, periodo])
 }
@@ -67,6 +69,8 @@ model Matricula {
   alunoId   Int
   turmaId   String
   criadaEm  DateTime @default(now())
+  situacao  String   @default("ATIVA")
+  canceladaEm DateTime?
   aluno     Aluno    @relation(fields: [alunoId], references: [id])
   turma     Turma    @relation(fields: [turmaId], references: [id])
 
@@ -108,6 +112,7 @@ model Curso {
   chPerfil      Int
   chLivre       Int
   curriculos    CurriculoDisciplina[]
+  alunos        Aluno[]
 }
 
 model CurriculoDisciplina {
@@ -134,4 +139,13 @@ model Historico {
 
   @@unique([alunoId, disciplinaId, periodo])
   @@index([alunoId, situacao])
+}
+
+
+// Professores são cadastrados pela secretaria; e-mail não pode se repetir.
+model Professor {
+  id     Int     @id @default(autoincrement())
+  nome   String
+  email  String  @unique
+  turmas Turma[]
 }
