@@ -116,6 +116,16 @@ async function run() {
     curso: "Curso Inexistente", senha: password,
   })).status, 400);
 
+  // Reprovação não impede matrícula posterior; aprovação impede.
+  const repetida = await call<Matricula>("POST", "/api/matriculas", {
+    alunoId: demo.data.id, turmaId: "ED0002",
+  }, demo.cookie);
+  assert.equal(repetida.status, 201);
+  const horasComMatricula = await call<{ grupos: Array<{ tipo: string; emCurso: number }> }>(
+    "GET", "/api/progresso", undefined, demo.cookie,
+  );
+  assert.equal(horasComMatricula.data.grupos.find((g) => g.tipo === "obrigatoria")?.emCurso, 60);
+
   const suffix = Date.now().toString(36);
   const a = await register(`a-${suffix}`);
   const b = await register(`b-${suffix}`);
