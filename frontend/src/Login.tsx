@@ -9,6 +9,7 @@ export default function Login({ onEntrar }: Props) {
   const [cadastrando, setCadastrando] = useState(false);
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
+  const [curso, setCurso] = useState("Sistemas de Informação");
   const [numeroMatricula, setNumeroMatricula] = useState("");
   const [senha, setSenha] = useState("");
   const [mostrarSenha, setMostrarSenha] = useState(false);
@@ -21,7 +22,7 @@ export default function Login({ onEntrar }: Props) {
     setErro(null);
     try {
       const aluno = cadastrando
-        ? await api.cadastrarConta({ nome, email, numeroMatricula, senha })
+        ? await api.cadastrarConta({ nome, email, numeroMatricula, senha, curso })
         : await api.entrar(numeroMatricula, senha);
       setSenha("");
       onEntrar(aluno);
@@ -70,6 +71,12 @@ export default function Login({ onEntrar }: Props) {
                 <input id="login-nome" type="text" autoComplete="name" maxLength={120}
                   value={nome} onChange={(event) => setNome(event.target.value)}
                   placeholder="Seu nome" required />
+
+                <label htmlFor="login-curso">Curso</label>
+                <select id="login-curso" value={curso} onChange={(event) => setCurso(event.target.value)} required>
+                  <option value="Sistemas de Informação">Sistemas de Informação</option>
+                  <option value="Ciência da Computação">Ciência da Computação</option>
+                </select>
 
                 <label htmlFor="login-email">E-mail</label>
                 <input id="login-email" type="email" autoComplete="email" maxLength={254}
