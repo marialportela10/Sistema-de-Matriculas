@@ -19,3 +19,6 @@ build/
 
 # Arquivos temporários
 *.log
+
+# Cliente Prisma gerado
+backend/src/generated/
