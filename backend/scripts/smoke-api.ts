@@ -4,6 +4,14 @@ import { prisma } from "../src/database/prisma.js";
 
 // HTTP smoke test against the CI SQLite database. Never run on real student data.
 const servidor = app.listen(0, "127.0.0.1");
+await new Promise<void>((resolve, reject) => {
+  if (servidor.listening) {
+    resolve();
+    return;
+  }
+  servidor.once("listening", resolve);
+  servidor.once("error", reject);
+});
 const endereco = servidor.address();
 if (!endereco || typeof endereco === "string") {
   throw new Error("Nao foi possivel abrir uma porta de testes.");
