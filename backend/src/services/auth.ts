@@ -41,7 +41,7 @@ export async function obterSessao(req: Request) {
   if (!token) return null;
   const sessao = await prisma.sessao.findUnique({
     where: { tokenHash: tokenHash(token) },
-    include: { aluno: { select: { id: true, nome: true, email: true, numeroMatricula: true, curso: true } } },
+    include: { aluno: { select: { id: true, nome: true, email: true, numeroMatricula: true, curso: { select: { nome: true } } } } },
   });
   if (!sessao || sessao.expiresAt <= new Date()) return null;
   return sessao;
