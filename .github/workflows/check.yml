@@ -43,6 +43,11 @@ jobs:
         working-directory: backend
         env:
           DATABASE_URL: file:./prisma/ci.db
+      - name: Check secretary management API and permissions
+        run: npx tsx scripts/smoke-admin.ts
+        working-directory: backend
+        env:
+          DATABASE_URL: file:./prisma/ci.db
       - name: Install frontend
         run: npm install --no-audit --no-fund
         working-directory: frontend
