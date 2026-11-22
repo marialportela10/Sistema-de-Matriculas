@@ -24,6 +24,7 @@ async function seed() {
 
   const turmas = [
     {
+      id: "IP0001",
       disciplinaId: ip.id,
       codigo: "A",
       periodo: "2026.2",
@@ -34,6 +35,7 @@ async function seed() {
       ],
     },
     {
+      id: "IP0002",
       disciplinaId: ip.id,
       codigo: "B",
       periodo: "2026.2",
@@ -44,6 +46,7 @@ async function seed() {
       ],
     },
     {
+      id: "ED0001",
       disciplinaId: edoo.id,
       codigo: "C",
       periodo: "2026.2",
@@ -66,6 +69,7 @@ async function seed() {
       },
       update: {},
       create: {
+        id: turma.id,
         disciplinaId: turma.disciplinaId,
         codigo: turma.codigo,
         periodo: turma.periodo,
