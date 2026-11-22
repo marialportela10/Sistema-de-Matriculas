@@ -1,5 +1,7 @@
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3001";
 
+export type CursoOpcao = { id: number; codigo: string; nome: string };
+
 export type Aluno = {
   id: number;
   nome: string;
@@ -99,6 +101,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 }
 
 export const api = {
+  cursos: () => request<CursoOpcao[]>("/api/cursos"),
   turmas: () => request<Turma[]>("/api/turmas"),
   progresso: () => request<Progresso>("/api/progresso"),
   sessao: () => request<Aluno>("/api/auth/me"),
