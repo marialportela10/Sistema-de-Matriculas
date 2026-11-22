@@ -1,6 +1,8 @@
 import express from "express";
 import cors from "cors";
 import { prisma } from "./database/prisma.js";
+import { alunosRouter } from "./routes/alunos.js";
+import { matriculasRouter } from "./routes/matriculas.js";
 
 export const app = express();
 
@@ -36,6 +38,9 @@ app.get("/api/turmas", async (_req, res) => {
 
   res.json(turmas);
 });
+
+app.use("/api/alunos", alunosRouter);
+app.use("/api/matriculas", matriculasRouter);
 
 // Resposta simples quando houver falha no acesso ao banco.
 app.use((
