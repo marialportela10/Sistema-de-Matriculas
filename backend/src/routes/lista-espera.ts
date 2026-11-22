@@ -102,15 +102,19 @@ listaEsperaRouter.delete("/:id", async (req, res, next) => {
   }
 
   try {
-    const registro = await prisma.listaEspera.findFirst({ where: { id, alunoId } });
-    if (!registro) {
-      res.status(404).json({ error: "Registro de espera nao encontrado para o aluno." });
-      return;
-    }
-
-    await prisma.listaEspera.delete({ where: { id } });
+    await prisma.$transaction(async (tx) => {
+      const registro = await tx.listaEspera.findFirst({ where: { id, alunoId } });
+      if (!registro) {
+        throw new ErroDaFila(404, "Registro de espera nao encontrado para o aluno.");
+      }
+      await tx.listaEspera.delete({ where: { id } });
+    });
     res.status(204).send();
   } catch (error) {
+    if (error instanceof ErroDaFila) {
+      res.status(error.status).json({ error: error.message });
+      return;
+    }
     next(error);
   }
 });
