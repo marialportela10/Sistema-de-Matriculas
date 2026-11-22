@@ -15,8 +15,13 @@ model Aluno {
   nome            String
   email           String        @unique
   numeroMatricula String        @unique
+  senhaHash       String?
+  cursoId         Int
+  curso           Curso          @relation(fields: [cursoId], references: [id])
+  sessoes         Sessao[]
   matriculas      Matricula[]
   listaEspera     ListaEspera[]
+  historico       Historico[]
 }
 
 // Uma disciplina pode oferecer varias turmas.
@@ -25,23 +30,28 @@ model Disciplina {
   codigo       String  @unique
   nome         String
   cargaHoraria Int
+  ementa       String?
   turmas       Turma[]
+  curriculos   CurriculoDisciplina[]
+  historico    Historico[]
 }
 
 // Uma turma pertence a exatamente uma disciplina.
 model Turma {
-  id           Int           @id @default(autoincrement())
+  id           String        @id
   codigo       String
   periodo      String
   capacidade   Int
-  professor    String?
   disciplinaId Int
   disciplina   Disciplina     @relation(fields: [disciplinaId], references: [id])
   horarios     HorarioTurma[]
   matriculas   Matricula[]
   listaEspera  ListaEspera[]
+  professorId  Int
+  docente      Professor        @relation(fields: [professorId], references: [id])
 
   @@unique([disciplinaId, codigo, periodo])
+  @@index([professorId])
 }
 
 // Horarios em formato HH:mm; diaSemana: 1=segunda ... 7=domingo.
@@ -50,7 +60,7 @@ model HorarioTurma {
   diaSemana Int
   inicio    String
   fim       String
-  turmaId   Int
+  turmaId   String
   turma     Turma  @relation(fields: [turmaId], references: [id], onDelete: Cascade)
 }
 
@@ -58,8 +68,10 @@ model HorarioTurma {
 model Matricula {
   id        Int      @id @default(autoincrement())
   alunoId   Int
-  turmaId   Int
+  turmaId   String
   criadaEm  DateTime @default(now())
+  situacao  String   @default("ATIVA")
+  canceladaEm DateTime?
   aluno     Aluno    @relation(fields: [alunoId], references: [id])
   turma     Turma    @relation(fields: [turmaId], references: [id])
 
@@ -70,10 +82,80 @@ model Matricula {
 model ListaEspera {
   id        Int      @id @default(autoincrement())
   alunoId   Int
-  turmaId   Int
+  turmaId   String
   criadaEm  DateTime @default(now())
   aluno     Aluno    @relation(fields: [alunoId], references: [id])
   turma     Turma    @relation(fields: [turmaId], references: [id])
 
   @@unique([alunoId, turmaId])
+}
+
+// Sessões mantidas no SQLite; apenas o hash do token fica armazenado.
+model Sessao {
+  id        Int      @id @default(autoincrement())
+  tokenHash String   @unique
+  alunoId   Int
+  expiresAt DateTime
+  criadaEm  DateTime @default(now())
+  aluno     Aluno    @relation(fields: [alunoId], references: [id], onDelete: Cascade)
+
+  @@index([alunoId])
+  @@index([expiresAt])
+}
+
+
+// Metas reais por curso, e classificacao contextual por disciplina.
+model Curso {
+  id            Int                   @id @default(autoincrement())
+  codigo        String                @unique
+  nome          String                @unique
+  chObrigatorias Int
+  chPerfil      Int
+  chLivre       Int
+  curriculos    CurriculoDisciplina[]
+  alunos        Aluno[]
+}
+
+model CurriculoDisciplina {
+  id           Int        @id @default(autoincrement())
+  cursoId      Int
+  disciplinaId Int
+  tipo         String
+  curso        Curso      @relation(fields: [cursoId], references: [id])
+  disciplina   Disciplina @relation(fields: [disciplinaId], references: [id])
+
+  @@unique([cursoId, disciplinaId])
+  @@index([disciplinaId])
+}
+
+// Historico anterior ao semestre atual: aprovada ou reprovada.
+model Historico {
+  id           Int        @id @default(autoincrement())
+  alunoId      Int
+  disciplinaId Int
+  periodo      String
+  situacao     String
+  aluno        Aluno      @relation(fields: [alunoId], references: [id])
+  disciplina   Disciplina @relation(fields: [disciplinaId], references: [id])
+
+  @@unique([alunoId, disciplinaId, periodo])
+  @@index([alunoId, situacao])
+}
+
+
+// Professores são cadastrados pela secretaria; e-mail não pode se repetir.
+model Professor {
+  id     Int     @id @default(autoincrement())
+  nome   String
+  email  String  @unique
+  turmas Turma[]
+}
+
+
+// Conta da secretaria cadastrada pelo seed; acesso e telas serão implementados no módulo administrativo.
+model UsuarioSecretaria {
+  id        Int    @id @default(autoincrement())
+  usuario   String @unique
+  email     String @unique
+  senhaHash String
 }

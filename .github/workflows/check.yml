@@ -1,0 +1,54 @@
+name: Check project
+
+on:
+  push:
+    branches: [feat/enrollment-system, feat/admin-dashboard]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install backend
+        run: npm install --no-audit --no-fund
+        working-directory: backend
+      - name: Generate client and build API
+        run: npm run build
+        working-directory: backend
+      - name: Test backend
+        run: npm test
+        working-directory: backend
+      - name: Apply migrations to clean SQLite database
+        run: npx prisma migrate deploy
+        working-directory: backend
+        env:
+          DATABASE_URL: file:./prisma/ci.db
+      - name: Seed the database
+        run: npm run db:seed
+        working-directory: backend
+        env:
+          DATABASE_URL: file:./prisma/ci.db
+      - name: Check existing-data migration
+        run: python3 scripts/check_migration.py
+        working-directory: backend
+      - name: Check course and professor data migration
+        run: python3 scripts/check_course_migration.py
+        working-directory: backend
+      - name: Check API enrollment flow
+        run: npx tsx scripts/smoke-api.ts
+        working-directory: backend
+        env:
+          DATABASE_URL: file:./prisma/ci.db
+      - name: Install frontend
+        run: npm install --no-audit --no-fund
+        working-directory: frontend
+      - name: Lint frontend
+        run: npm run lint
+        working-directory: frontend
+      - name: Build frontend
+        run: npm run build
+        working-directory: frontend
