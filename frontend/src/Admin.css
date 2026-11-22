@@ -42,6 +42,7 @@
 .admin-formulario p { color: #435f70; font-size: .86rem; margin-bottom: 18px; line-height: 1.55; }
 .admin-formulario form { display: flex; flex-direction: column; gap: 10px; }
 .admin-formulario label { font-size: .87rem; font-weight: 750; color: #263f50; }
+.admin-campo-ajuda { color: #4b6577; font-size: .76rem; line-height: 1.35; }
 .admin-formulario input, .admin-formulario select, .admin-formulario textarea,
 .admin-filtros input, .admin-vagas input {
   background: #fff; color: #172a3a; border: 1px solid #8ca4b4; border-radius: 9px;
