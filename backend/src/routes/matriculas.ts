@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { prisma } from "../database/prisma.js";
 import { horariosConflitam } from "../services/horarios.js";
+import { idTurmaValido } from "../services/ids.js";
 
 export const matriculasRouter = Router();
 
@@ -41,9 +42,9 @@ matriculasRouter.post("/", async (req, res, next) => {
 
   if (
     typeof alunoId !== "number" || !Number.isSafeInteger(alunoId) || alunoId <= 0 ||
-    typeof turmaId !== "number" || !Number.isSafeInteger(turmaId) || turmaId <= 0
+    !idTurmaValido(turmaId)
   ) {
-    res.status(400).json({ error: "alunoId e turmaId devem ser inteiros positivos." });
+    res.status(400).json({ error: "Informe alunoId positivo e turmaId no formato AA0000." });
     return;
   }
 
