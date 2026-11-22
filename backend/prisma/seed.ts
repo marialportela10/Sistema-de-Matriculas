@@ -79,9 +79,13 @@ async function seed() {
         data: { nome: oferta.professor, email: "docente-" + oferta.id.toLowerCase() + "@example.test" },
       });
     }
+    const turmaAtual = await prisma.turma.findUnique({
+      where: { id: oferta.id }, include: { docente: true },
+    });
     await prisma.turma.upsert({
       where: { id: oferta.id },
-      update: {},
+      // Corrigir apenas professor legado ausente; não substituir alterações da secretaria.
+      update: turmaAtual?.docente.nome === "Professor a definir" ? { professorId: docente.id } : {},
       create: {
         id: oferta.id,
         disciplinaId,
