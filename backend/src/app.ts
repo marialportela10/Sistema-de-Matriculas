@@ -5,6 +5,7 @@ import { alunosRouter } from "./routes/alunos.js";
 import { matriculasRouter } from "./routes/matriculas.js";
 import { listaEsperaRouter } from "./routes/lista-espera.js";
 import { authRouter } from "./routes/auth.js";
+import { adminRouter } from "./routes/admin.js";
 import { progressoRouter } from "./routes/progresso.js";
 import { exigirAutenticacao } from "./services/auth.js";
 
@@ -31,6 +32,9 @@ app.get("/api/cursos", async (_req, res, next) => {
     res.json(cursos);
   } catch (error) { next(error); }
 });
+
+// A Secretaria possui autenticação e rotas independentes das sessões dos alunos.
+app.use("/api/admin", adminRouter);
 
 // As outras rotas exigem login e ficam vinculadas ao perfil do aluno.
 app.use("/api/auth", authRouter);
