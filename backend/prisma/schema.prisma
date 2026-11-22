@@ -16,6 +16,7 @@ model Aluno {
   email           String        @unique
   numeroMatricula String        @unique
   senhaHash       String?
+  curso           String?
   sessoes         Sessao[]
   matriculas      Matricula[]
   listaEspera     ListaEspera[]
@@ -27,6 +28,7 @@ model Disciplina {
   codigo       String  @unique
   nome         String
   cargaHoraria Int
+  ementa       String?
   turmas       Turma[]
 }
 
