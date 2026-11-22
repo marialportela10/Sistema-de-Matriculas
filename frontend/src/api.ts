@@ -34,6 +34,8 @@ export type Turma = {
   disciplina: Disciplina;
   horarios: Horario[];
   vagasDisponiveis: number;
+  classificacao: "obrigatoria" | "eletiva-perfil" | "eletiva-livre" | null;
+  jaAprovada: boolean;
   _count: { matriculas: number; listaEspera: number };
 };
 
@@ -52,6 +54,17 @@ export type Espera = {
   criadaEm: string;
   turma: Omit<Turma, "vagasDisponiveis" | "_count">;
 };
+
+export type GrupoProgresso = {
+  tipo: "obrigatoria" | "eletiva-perfil" | "eletiva-livre";
+  nome: string;
+  exigida: number;
+  integralizada: number;
+  emCurso: number;
+  falta: number;
+  percentual: number;
+};
+export type Progresso = { curso: string; grupos: GrupoProgresso[] };
 
 export class ApiError extends Error {
   readonly status: number;
@@ -87,6 +100,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
 export const api = {
   turmas: () => request<Turma[]>("/api/turmas"),
+  progresso: () => request<Progresso>("/api/progresso"),
   sessao: () => request<Aluno>("/api/auth/me"),
   entrar: (numeroMatricula: string, senha: string) =>
     request<Aluno>("/api/auth/login", {
