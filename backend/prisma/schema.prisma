@@ -150,3 +150,12 @@ model Professor {
   email  String  @unique
   turmas Turma[]
 }
+
+
+// Conta da secretaria cadastrada pelo seed; acesso e telas serão implementados no módulo administrativo.
+model UsuarioSecretaria {
+  id        Int    @id @default(autoincrement())
+  usuario   String @unique
+  email     String @unique
+  senhaHash String
+}
