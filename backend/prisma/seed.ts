@@ -1,4 +1,5 @@
 import { prisma } from "../src/database/prisma.js";
+import { gerarHashSenha } from "../src/services/auth.js";
 
 // Dados fictícios para demonstrar as cinco abas. Upsert preserva matrículas e registros existentes.
 async function seed() {
@@ -85,7 +86,60 @@ async function seed() {
     });
   }
 
-  console.log("Dados fictícios disponíveis: 6 disciplinas e 9 ofertas de turma.");
+
+  // Dois cursos compartilham componentes, mas classificam algumas disciplinas de forma diferente.
+  const cursos = [
+    { codigo: "SI", nome: "Sistemas de Informação", chObrigatorias: 1800, chPerfil: 600, chLivre: 180 },
+    { codigo: "CC", nome: "Ciência da Computação", chObrigatorias: 1950, chPerfil: 480, chLivre: 180 },
+  ] as const;
+  for (const curso of cursos) {
+    const criado = await prisma.curso.upsert({
+      where: { codigo: curso.codigo },
+      update: { nome: curso.nome, chObrigatorias: curso.chObrigatorias, chPerfil: curso.chPerfil, chLivre: curso.chLivre },
+      create: curso,
+    });
+    for (const d of disciplinas) {
+      const tipo = (curso.codigo === "SI" && d.codigo === "DS") ||
+        (curso.codigo === "CC" && d.codigo === "DES102") ? "eletiva-perfil" :
+        ["IP", "EDOO", "ACSO", "MAT101"].includes(d.codigo) ? "obrigatoria" : null;
+      if (!tipo) continue;
+      const disciplinaId = ids.get(d.codigo);
+      if (!disciplinaId) continue;
+      await prisma.curriculoDisciplina.upsert({
+        where: { cursoId_disciplinaId: { cursoId: criado.id, disciplinaId } },
+        update: { tipo },
+        create: { cursoId: criado.id, disciplinaId, tipo },
+      });
+    }
+  }
+
+  // Conta estritamente fictícia para demonstrar o currículo completo no protótipo local.
+  const demo = await prisma.aluno.upsert({
+    where: { numeroMatricula: "DEMO2026" },
+    update: {},
+    create: {
+      nome: "Ana Carolina Ferreira",
+      email: "ana.demo@example.test",
+      numeroMatricula: "DEMO2026",
+      curso: "Sistemas de Informação",
+      senhaHash: await gerarHashSenha("Demo@12345"),
+    },
+  });
+  for (const anterior of [
+    { codigo: "IP", periodo: "2025.2", situacao: "APROVADA" },
+    { codigo: "DS", periodo: "2025.2", situacao: "APROVADA" },
+    { codigo: "EDOO", periodo: "2026.1", situacao: "REPROVADA" },
+  ]) {
+    const disciplinaId = ids.get(anterior.codigo);
+    if (!disciplinaId) continue;
+    await prisma.historico.upsert({
+      where: { alunoId_disciplinaId_periodo: { alunoId: demo.id, disciplinaId, periodo: anterior.periodo } },
+      update: {},
+      create: { alunoId: demo.id, disciplinaId, periodo: anterior.periodo, situacao: anterior.situacao },
+    });
+  }
+
+  console.log("Dados fictícios disponíveis: 2 cursos, 6 disciplinas, 9 turmas e conta DEMO2026.");
 }
 
 seed()
