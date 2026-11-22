@@ -73,6 +73,12 @@ async function seed() {
     if (!disciplinaId) throw new Error("Disciplina de exemplo não encontrada: " + oferta.disciplinaCodigo);
 
     // Não substitui horários, vagas ou professor das turmas que já existiam.
+    let docente = await prisma.professor.findFirst({ where: { nome: oferta.professor } });
+    if (!docente) {
+      docente = await prisma.professor.create({
+        data: { nome: oferta.professor, email: "docente-" + oferta.id.toLowerCase() + "@example.test" },
+      });
+    }
     await prisma.turma.upsert({
       where: { id: oferta.id },
       update: {},
@@ -82,7 +88,7 @@ async function seed() {
         codigo: oferta.codigo,
         periodo: "2026.2",
         capacidade: oferta.capacidade,
-        professor: oferta.professor,
+        professorId: docente.id,
         horarios: { create: oferta.horarios },
       },
     });
@@ -94,12 +100,14 @@ async function seed() {
     { codigo: "SI", nome: "Sistemas de Informação", chObrigatorias: 1800, chPerfil: 600, chLivre: 180 },
     { codigo: "CC", nome: "Ciência da Computação", chObrigatorias: 1950, chPerfil: 480, chLivre: 180 },
   ] as const;
+  const cursoIds = new Map<string, number>();
   for (const curso of cursos) {
     const criado = await prisma.curso.upsert({
       where: { codigo: curso.codigo },
       update: { nome: curso.nome, chObrigatorias: curso.chObrigatorias, chPerfil: curso.chPerfil, chLivre: curso.chLivre },
       create: curso,
     });
+    cursoIds.set(curso.codigo, criado.id);
     for (const d of disciplinas) {
       const tipo = (curso.codigo === "SI" && d.codigo === "DS") ||
         (curso.codigo === "CC" && d.codigo === "DES102") ? "eletiva-perfil" :
@@ -123,7 +131,7 @@ async function seed() {
       nome: "Ana Carolina Ferreira",
       email: "ana.demo@example.test",
       numeroMatricula: "DEMO2026",
-      curso: "Sistemas de Informação",
+      cursoId: cursoIds.get("SI")!,
       senhaHash: await gerarHashSenha("Demo@12345"),
     },
   });
@@ -149,11 +157,25 @@ async function seed() {
       nome: "Estudante Reserva",
       email: "reserva@example.test",
       numeroMatricula: "RESERVA2026",
-      curso: "Ciência da Computação",
+      cursoId: cursoIds.get("CC")!,
       senhaHash: await gerarHashSenha("Demo@12345"),
     },
   });
-  const vagas = await prisma.matricula.count({ where: { turmaId: "IP0003" } });
+  for (const anterior of [
+    { codigo: "EDOO", periodo: "2025.2", situacao: "APROVADA" },
+    { codigo: "DES102", periodo: "2025.2", situacao: "APROVADA" },
+    { codigo: "ACSO", periodo: "2026.1", situacao: "REPROVADA" },
+  ]) {
+    const disciplinaId = ids.get(anterior.codigo);
+    if (!disciplinaId) continue;
+    await prisma.historico.upsert({
+      where: { alunoId_disciplinaId_periodo: { alunoId: reserva.id, disciplinaId, periodo: anterior.periodo } },
+      update: {},
+      create: { alunoId: reserva.id, disciplinaId, periodo: anterior.periodo, situacao: anterior.situacao },
+    });
+  }
+
+  const vagas = await prisma.matricula.count({ where: { turmaId: "IP0003", situacao: "ATIVA" } });
   if (vagas === 0) {
     await prisma.matricula.create({ data: { alunoId: reserva.id, turmaId: "IP0003" } });
   }
