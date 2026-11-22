@@ -43,7 +43,7 @@ export default function Login({ onEntrar }: Props) {
   return (
     <div className="pagina-login">
       <div className="login-coluna-apresentacao">
-        <span className="login-marca">Portal Acadêmico</span>
+        <span className="login-marca">Sistema de Matrícula</span>
         <div className="login-texto">
           <span className="login-sobre">Sistema de Matrícula</span>
           <h1>Seu semestre começa aqui.</h1>
