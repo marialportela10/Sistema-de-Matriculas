@@ -114,11 +114,31 @@ async function run() {
   assert.equal((await call("POST", "/api/admin/turmas", {
     ...turmaDados, horarios: [{ diaSemana: 8, inicio: "10:00", fim: "12:00" }],
   }, adminCookie)).status, 400);
+  for (const invalida of ["AB", "12", "A123", "A1B", ""]) {
+    assert.equal((await call("POST", "/api/admin/turmas", {
+      ...turmaDados, codigo: invalida,
+    }, adminCookie)).status, 400, "Turma inválida: " + invalida);
+  }
   const turma = await call<Turma>("POST", "/api/admin/turmas", turmaDados, adminCookie);
   assert.equal(turma.status, 201);
   assert.match(turma.data.id, /^[A-Z]{2}\d{4}$/);
   assert.equal(turma.data.capacidade, 2);
   assert.equal((await call("POST", "/api/admin/turmas", turmaDados, adminCookie)).status, 409);
+  // Também aceita letra + 1 número ou letra + 2 números; normaliza minúsculas.
+  const comNumero = await call<Turma>("POST", "/api/admin/turmas", {
+    ...turmaDados, codigo: "B1",
+  }, adminCookie);
+  assert.equal(comNumero.status, 201);
+  assert.equal(comNumero.data.codigo, "B1");
+  const comDoisNumeros = await call<Turma>("POST", "/api/admin/turmas", {
+    ...turmaDados, codigo: "c12",
+  }, adminCookie);
+  assert.equal(comDoisNumeros.status, 201);
+  assert.equal(comDoisNumeros.data.codigo, "C12");
+  assert.equal((await call("POST", "/api/admin/turmas", {
+    ...turmaDados, codigo: "a",
+  }, adminCookie)).status, 409);
+
 
   const aluno = await call<Aluno>("POST", "/api/auth/register", {
     nome: "Aluno Admin Smoke", email: "aluno-" + sufixo.toLowerCase() + "@example.test",
