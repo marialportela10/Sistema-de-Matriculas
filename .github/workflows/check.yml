@@ -2,7 +2,7 @@ name: Check project
 
 on:
   push:
-    branches: [feat/enrollment-system]
+    branches: [feat/enrollment-system, feat/admin-dashboard]
   pull_request:
 
 jobs:
@@ -34,6 +34,9 @@ jobs:
           DATABASE_URL: file:./prisma/ci.db
       - name: Check existing-data migration
         run: python3 scripts/check_migration.py
+        working-directory: backend
+      - name: Check course and professor data migration
+        run: python3 scripts/check_course_migration.py
         working-directory: backend
       - name: Check API enrollment flow
         run: npx tsx scripts/smoke-api.ts
