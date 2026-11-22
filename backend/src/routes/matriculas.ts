@@ -70,6 +70,11 @@ matriculasRouter.post("/", async (req, res, next) => {
         },
       });
       if (!turma) throw new RegraDeMatriculaError(404, "Turma nao encontrada.");
+      const aprovado = await tx.historico.findFirst({
+        where: { alunoId, disciplinaId: turma.disciplinaId, situacao: "APROVADA" },
+        select: { id: true },
+      });
+      if (aprovado) throw new RegraDeMatriculaError(409, "Disciplina já aprovada. Não é permitido cursá-la novamente.");
 
       const atuais = await tx.matricula.findMany({
         where: { alunoId, turma: { periodo: turma.periodo } },
