@@ -153,6 +153,10 @@ export default function Admin({ secretaria, onSair, onExpirada }: {
     finally { setOcupado(false); }
   }
 
+  const disciplinaSelecionada = opcoes.disciplinas.find((d) => d.id === Number(disciplinaT));
+  const cargaHorariaInvalida = disciplinaSelecionada !== undefined &&
+    (disciplinaSelecionada.cargaHoraria < 15 || disciplinaSelecionada.cargaHoraria > 120 ||
+      disciplinaSelecionada.cargaHoraria % 15 !== 0);
   const resultado = aba === "disciplinas" ? disciplinas : aba === "professores" ? professores : turmas;
   const atualizar = () => { setCarregando(true); setVersao((n) => n + 1); };
 
@@ -285,6 +289,16 @@ export default function Admin({ secretaria, onSair, onExpirada }: {
                 <option value="">Selecione a disciplina</option>
                 {opcoes.disciplinas.map((d) => <option key={d.id} value={d.id}>{d.codigo} — {d.nome}</option>)}
               </select>
+              <label htmlFor="turma-carga-horaria">Carga horária da disciplina</label>
+              <input id="turma-carga-horaria" className="admin-somente-leitura" type="text" readOnly
+                aria-describedby="turma-carga-ajuda"
+                value={disciplinaSelecionada ? disciplinaSelecionada.cargaHoraria + " h" : ""}
+                placeholder="Selecione a disciplina acima" />
+              <small id="turma-carga-ajuda" className={cargaHorariaInvalida ? "admin-campo-erro" : "admin-campo-ajuda"}>
+                {cargaHorariaInvalida
+                  ? "Carga horária inválida. Corrija a disciplina antes de abrir a turma."
+                  : "Definida no cadastro da disciplina: múltiplos de 15, entre 15h e 120h."}
+              </small>
               <label htmlFor="turma-professor">Professor</label>
               <select id="turma-professor" value={professorT} required onChange={(e) => setProfessorT(e.target.value)}>
                 <option value="">Selecione o professor</option>
@@ -318,7 +332,7 @@ export default function Admin({ secretaria, onSair, onExpirada }: {
                 <button type="button" className="botao-claro" disabled={horarios.length >= 10}
                   onClick={() => setHorarios((lista) => [...lista, HORARIO_INICIAL()])}>+ Adicionar horário</button>
               </fieldset>
-              <button className="botao-primario" type="submit" disabled={ocupado || !opcoes.disciplinas.length || !opcoes.professores.length}>
+              <button className="botao-primario" type="submit" disabled={ocupado || cargaHorariaInvalida || !opcoes.disciplinas.length || !opcoes.professores.length}>
                 {ocupado ? "Salvando…" : "Abrir turma"}
               </button>
               {(!opcoes.disciplinas.length || !opcoes.professores.length) &&
