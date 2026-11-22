@@ -87,7 +87,7 @@ adminRouter.use(exigirSecretaria);
 adminRouter.get("/opcoes", async (_req, res, next) => {
   try {
     const [disciplinas, professores] = await Promise.all([
-      prisma.disciplina.findMany({ select: { id: true, codigo: true, nome: true }, orderBy: { nome: "asc" } }),
+      prisma.disciplina.findMany({ select: { id: true, codigo: true, nome: true, cargaHoraria: true }, orderBy: { nome: "asc" } }),
       prisma.professor.findMany({ select: { id: true, nome: true, email: true }, orderBy: { nome: "asc" } }),
     ]);
     res.json({ disciplinas, professores });
@@ -236,6 +236,8 @@ adminRouter.post("/turmas", async (req, res, next) => {
         } }),
       ]);
       if (!d || !p) throw new ErroAdmin(404, "Disciplina ou professor não encontrado.");
+      const erroCargaHoraria = validarCargaHoraria(d.cargaHoraria);
+      if (erroCargaHoraria) throw new ErroAdmin(400, "Não é possível abrir uma turma: " + erroCargaHoraria + " Corrija a disciplina antes de continuar.");
       if (existente) throw new ErroAdmin(409, "Já existe essa seção para a disciplina neste semestre.");
 
       const prefixo = d.codigo.replace(/[^A-Z]/g, "").slice(0, 2).padEnd(2, "X");
