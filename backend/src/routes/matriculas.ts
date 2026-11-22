@@ -153,7 +153,7 @@ matriculasRouter.delete("/:id", async (req, res, next) => {
         where: { id: cancelada.turmaId },
         include: {
           horarios: true,
-          _count: { select: { matriculas: true } },
+          _count: { select: { matriculas: { where: { situacao: "ATIVA" } } } },
         },
       });
 
@@ -167,7 +167,7 @@ matriculasRouter.delete("/:id", async (req, res, next) => {
 
         for (const candidato of fila) {
           const atuais = await tx.matricula.findMany({
-            where: { alunoId: candidato.alunoId, turma: { periodo: turma.periodo } },
+            where: { alunoId: candidato.alunoId, situacao: "ATIVA", turma: { periodo: turma.periodo } },
             include: { turma: { include: { horarios: true } } },
           });
 
