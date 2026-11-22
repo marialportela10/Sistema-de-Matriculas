@@ -35,6 +35,11 @@ jobs:
       - name: Check existing-data migration
         run: python3 scripts/check_migration.py
         working-directory: backend
+      - name: Check API enrollment flow
+        run: npx tsx scripts/smoke-api.ts
+        working-directory: backend
+        env:
+          DATABASE_URL: file:./prisma/ci.db
       - name: Install frontend
         run: npm install --no-audit --no-fund
         working-directory: frontend
