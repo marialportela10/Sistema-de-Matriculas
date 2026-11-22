@@ -21,6 +21,10 @@ matriculasRouter.get("/", async (req, res, next) => {
     res.status(400).json({ error: "Informe alunoId na consulta." });
     return;
   }
+  if (alunoId !== res.locals.alunoId) {
+    res.status(403).json({ error: "Você só pode consultar suas próprias matrículas." });
+    return;
+  }
 
   try {
     const matriculas = await prisma.matricula.findMany({
@@ -45,6 +49,10 @@ matriculasRouter.post("/", async (req, res, next) => {
     !idTurmaValido(turmaId)
   ) {
     res.status(400).json({ error: "Informe alunoId positivo e turmaId no formato AA0000." });
+    return;
+  }
+  if (alunoId !== res.locals.alunoId) {
+    res.status(403).json({ error: "Não é permitido matricular outro aluno." });
     return;
   }
 
@@ -76,7 +84,7 @@ matriculasRouter.post("/", async (req, res, next) => {
       const criada = await tx.matricula.create({
         data: { alunoId, turmaId },
         include: {
-          aluno: true,
+          aluno: { select: { id: true, nome: true, email: true, numeroMatricula: true } },
           turma: { include: { disciplina: true } },
         },
       });
@@ -116,6 +124,10 @@ matriculasRouter.delete("/:id", async (req, res, next) => {
     typeof alunoId !== "number" || !Number.isSafeInteger(alunoId) || alunoId <= 0
   ) {
     res.status(400).json({ error: "Informe o id da matricula e alunoId positivo." });
+    return;
+  }
+  if (alunoId !== res.locals.alunoId) {
+    res.status(403).json({ error: "Não é permitido cancelar a matrícula de outro aluno." });
     return;
   }
 
