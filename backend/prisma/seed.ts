@@ -184,7 +184,17 @@ async function seed() {
     await prisma.matricula.create({ data: { alunoId: reserva.id, turmaId: "IP0003" } });
   }
 
-  console.log("Dados fictícios disponíveis: 2 cursos, 6 disciplinas, 10 turmas, uma lotada e conta DEMO2026.");
+  await prisma.usuarioSecretaria.upsert({
+    where: { usuario: "secretaria.demo" },
+    update: {},
+    create: {
+      usuario: "secretaria.demo",
+      email: "secretaria@example.test",
+      senhaHash: await gerarHashSenha("Secretaria@12345"),
+    },
+  });
+
+  console.log("Dados fictícios: dois cursos e seus históricos, professores, 10 turmas e usuário de secretaria.");
 }
 
 seed()
