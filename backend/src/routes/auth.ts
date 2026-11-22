@@ -19,7 +19,7 @@ function chaveLogin(matricula: string, ip: string) {
 }
 
 authRouter.post("/register", async (req, res, next) => {
-  const { nome, email, numeroMatricula, senha } = req.body ?? {};
+  const { nome, email, numeroMatricula, senha, curso } = req.body ?? {};
 
   if (
     typeof nome !== "string" || !nome.trim() || nome.trim().length > 120 ||
@@ -27,6 +27,7 @@ authRouter.post("/register", async (req, res, next) => {
     !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) ||
     typeof numeroMatricula !== "string" || !numeroMatricula.trim() ||
     numeroMatricula.trim().length > 32 ||
+    typeof curso !== "string" || !curso.trim() || curso.trim().length > 120 ||
     typeof senha !== "string" || senha.length < 8 || senha.length > 128
   ) {
     res.status(400).json({
@@ -42,8 +43,9 @@ authRouter.post("/register", async (req, res, next) => {
         email: email.trim().toLowerCase(),
         numeroMatricula: numeroMatricula.trim(),
         senhaHash: await gerarHashSenha(senha),
+        curso: curso.trim(),
       },
-      select: { id: true, nome: true, email: true, numeroMatricula: true },
+      select: { id: true, nome: true, email: true, numeroMatricula: true, curso: true },
     });
     await abrirSessao(res, aluno.id);
     res.status(201).json(aluno);
@@ -88,7 +90,7 @@ authRouter.post("/login", async (req, res, next) => {
 
     tentativas.delete(chave);
     await abrirSessao(res, aluno.id);
-    res.json({ id: aluno.id, nome: aluno.nome, email: aluno.email, numeroMatricula: aluno.numeroMatricula });
+    res.json({ id: aluno.id, nome: aluno.nome, email: aluno.email, numeroMatricula: aluno.numeroMatricula, curso: aluno.curso });
   } catch (error) {
     next(error);
   }
