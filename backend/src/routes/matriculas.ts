@@ -28,13 +28,13 @@ matriculasRouter.get("/", async (req, res, next) => {
 
   try {
     const matriculas = await prisma.matricula.findMany({
-      where: { alunoId },
+      where: { alunoId, situacao: "ATIVA" },
       include: {
-        turma: { include: { disciplina: true, horarios: true } },
+        turma: { include: { disciplina: true, horarios: true, docente: true } },
       },
       orderBy: { criadaEm: "asc" },
     });
-    res.json(matriculas);
+    res.json(matriculas.map((m) => ({ ...m, turma: { ...m.turma, professor: m.turma.docente.nome } })));
   } catch (error) {
     next(error);
   }
@@ -66,7 +66,7 @@ matriculasRouter.post("/", async (req, res, next) => {
         where: { id: turmaId },
         include: {
           horarios: true,
-          _count: { select: { matriculas: true } },
+          _count: { select: { matriculas: { where: { situacao: "ATIVA" } } } },
         },
       });
       if (!turma) throw new RegraDeMatriculaError(404, "Turma nao encontrada.");
@@ -77,7 +77,7 @@ matriculasRouter.post("/", async (req, res, next) => {
       if (aprovado) throw new RegraDeMatriculaError(409, "Disciplina já aprovada. Não é permitido cursá-la novamente.");
 
       const atuais = await tx.matricula.findMany({
-        where: { alunoId, turma: { periodo: turma.periodo } },
+        where: { alunoId, situacao: "ATIVA", turma: { periodo: turma.periodo } },
         include: { turma: { include: { horarios: true } } },
       });
 
@@ -86,8 +86,11 @@ matriculasRouter.post("/", async (req, res, next) => {
         throw new RegraDeMatriculaError(409, impedimento);
       }
 
-      const criada = await tx.matricula.create({
-        data: { alunoId, turmaId },
+      // Reactivation of a cancelled row keeps one record per student/class.
+      const criada = await tx.matricula.upsert({
+        where: { alunoId_turmaId: { alunoId, turmaId } },
+        create: { alunoId, turmaId, situacao: "ATIVA" },
+        update: { situacao: "ATIVA", canceladaEm: null, criadaEm: new Date() },
         include: {
           aluno: { select: { id: true, nome: true, email: true, numeroMatricula: true } },
           turma: { include: { disciplina: true } },
@@ -138,12 +141,14 @@ matriculasRouter.delete("/:id", async (req, res, next) => {
 
   try {
     const resultado = await prisma.$transaction(async (tx) => {
-      const existente = await tx.matricula.findFirst({ where: { id, alunoId } });
+      const existente = await tx.matricula.findFirst({ where: { id, alunoId, situacao: "ATIVA" } });
       if (!existente) {
         throw new RegraDeMatriculaError(404, "Matricula nao encontrada para o aluno.");
       }
 
-      const cancelada = await tx.matricula.delete({ where: { id } });
+      const cancelada = await tx.matricula.update({
+        where: { id }, data: { situacao: "CANCELADA", canceladaEm: new Date() },
+      });
       const turma = await tx.turma.findUnique({
         where: { id: cancelada.turmaId },
         include: {
@@ -166,11 +171,17 @@ matriculasRouter.delete("/:id", async (req, res, next) => {
             include: { turma: { include: { horarios: true } } },
           });
 
-          // Quem ficou inelegivel permanece na fila, mas nao bloqueia os demais.
-          if (impedimentoAcademico(turma, atuais)) continue;
+          // Conferir também o histórico: a aprovação pode ter ocorrido após entrar na fila.
+          const aprovada = await tx.historico.findFirst({
+            where: { alunoId: candidato.alunoId, disciplinaId: turma.disciplinaId, situacao: "APROVADA" },
+            select: { id: true },
+          });
+          if (aprovada || impedimentoAcademico(turma, atuais)) continue;
 
-          const matricula = await tx.matricula.create({
-            data: { alunoId: candidato.alunoId, turmaId: turma.id },
+          const matricula = await tx.matricula.upsert({
+            where: { alunoId_turmaId: { alunoId: candidato.alunoId, turmaId: turma.id } },
+            create: { alunoId: candidato.alunoId, turmaId: turma.id, situacao: "ATIVA" },
+            update: { situacao: "ATIVA", canceladaEm: null, criadaEm: new Date() },
           });
           await tx.listaEspera.delete({ where: { id: candidato.id } });
 
