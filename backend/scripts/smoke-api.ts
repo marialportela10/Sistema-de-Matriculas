@@ -61,6 +61,16 @@ async function run() {
   assert.equal((await call("GET", "/api/turmas")).status, 401);
   assert.equal((await call("GET", "/api/matriculas?alunoId=1")).status, 401);
 
+  const secretaria = await prisma.usuarioSecretaria.findUnique({ where: { usuario: "secretaria.demo" } });
+  assert.ok(secretaria);
+  assert.notEqual(secretaria.senhaHash, "Secretaria@12345");
+  const reserva = await prisma.aluno.findUnique({
+    where: { numeroMatricula: "RESERVA2026" }, include: { curso: true, historico: true },
+  });
+  assert.equal(reserva?.curso.codigo, "CC");
+  assert.ok(reserva?.historico.some((h) => h.situacao === "APROVADA"));
+  assert.ok(reserva?.historico.some((h) => h.situacao === "REPROVADA"));
+
   const demo = await call<Aluno>("POST", "/api/auth/login", {
     numeroMatricula: "DEMO2026",
     senha: "Demo@12345",
