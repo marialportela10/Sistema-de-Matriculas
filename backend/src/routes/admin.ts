@@ -218,8 +218,8 @@ adminRouter.post("/turmas", async (req, res, next) => {
   const disciplina = idValido(disciplinaId), professor = idValido(professorId);
   const secao = typeof codigo === "string" ? codigo.trim().toUpperCase() : "";
   const erroVagas = validarVagas(capacidade, 0);
-  if (!disciplina || !professor || !/^[A-Z0-9]{1,10}$/.test(secao) || erroVagas) {
-    res.status(400).json({ error: erroVagas ?? "Informe disciplina, professor e código de turma válidos." });
+  if (!disciplina || !professor || !/^[A-Z][0-9]{0,2}$/.test(secao) || erroVagas) {
+    res.status(400).json({ error: erroVagas ?? "Selecione disciplina e professor e informe uma turma com uma letra e até dois números (A, A1 ou A12)." });
     return;
   }
   let horariosValidados: ReturnType<typeof validarHorario>;
