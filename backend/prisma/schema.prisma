@@ -1,0 +1,79 @@
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  moduleFormat        = "esm"
+  importFileExtension = "ts"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// Aluno pode se matricular em varias turmas.
+model Aluno {
+  id              Int           @id @default(autoincrement())
+  nome            String
+  email           String        @unique
+  numeroMatricula String        @unique
+  matriculas      Matricula[]
+  listaEspera     ListaEspera[]
+}
+
+// Uma disciplina pode oferecer varias turmas.
+model Disciplina {
+  id           Int     @id @default(autoincrement())
+  codigo       String  @unique
+  nome         String
+  cargaHoraria Int
+  turmas       Turma[]
+}
+
+// Uma turma pertence a exatamente uma disciplina.
+model Turma {
+  id           Int           @id @default(autoincrement())
+  codigo       String
+  periodo      String
+  capacidade   Int
+  professor    String?
+  disciplinaId Int
+  disciplina   Disciplina     @relation(fields: [disciplinaId], references: [id])
+  horarios     HorarioTurma[]
+  matriculas   Matricula[]
+  listaEspera  ListaEspera[]
+
+  @@unique([disciplinaId, codigo, periodo])
+}
+
+// Horarios em formato HH:mm; diaSemana: 1=segunda ... 7=domingo.
+model HorarioTurma {
+  id        Int    @id @default(autoincrement())
+  diaSemana Int
+  inicio    String
+  fim       String
+  turmaId   Int
+  turma     Turma  @relation(fields: [turmaId], references: [id], onDelete: Cascade)
+}
+
+// Tabela de ligacao entre aluno e turma, sem matriculas duplicadas.
+model Matricula {
+  id        Int      @id @default(autoincrement())
+  alunoId   Int
+  turmaId   Int
+  criadaEm  DateTime @default(now())
+  aluno     Aluno    @relation(fields: [alunoId], references: [id])
+  turma     Turma    @relation(fields: [turmaId], references: [id])
+
+  @@unique([alunoId, turmaId])
+}
+
+// A ordem de espera sera definida por criadaEm e id.
+model ListaEspera {
+  id        Int      @id @default(autoincrement())
+  alunoId   Int
+  turmaId   Int
+  criadaEm  DateTime @default(now())
+  aluno     Aluno    @relation(fields: [alunoId], references: [id])
+  turma     Turma    @relation(fields: [turmaId], references: [id])
+
+  @@unique([alunoId, turmaId])
+}
