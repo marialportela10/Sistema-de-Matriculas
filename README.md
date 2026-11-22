@@ -20,6 +20,19 @@ O cadastro solicita nome, curso, número de matrícula e senha. O curso é vincu
 - O cancelamento libera a vaga. Se houver lista de espera, o sistema revalida a elegibilidade antes de efetivar a promoção.
 - A carga horária concluída considera as aprovações do histórico. As disciplinas em andamento aparecem separadamente, e o excedente de eletivas de perfil pode contar como eletiva livre.
 
+## Requisito adicional escolhido — choque de horários
+
+Escolhi impedir choques de horários para que o aluno consiga montar uma grade que possa frequentar. A grade semanal mostra as turmas selecionadas, e a interface indica qual escolha causa o conflito antes da confirmação.
+
+Dois horários entram em conflito quando ocorrem no mesmo dia e seus intervalos se sobrepõem. Uma aula pode começar no horário em que outra termina. O portal compara as escolhas com as turmas já matriculadas e com as demais seleções. Na confirmação, a API valida novamente os horários das matrículas ativas do semestre. A lista de espera é outra funcionalidade implementada.
+
+## Principais decisões
+
+- **Monorepo.** A interface fica em `frontend/` e a API em `backend/`, para que os dois componentes sejam versionados juntos e possam ser executados em terminais separados.
+- **SQLite e Prisma.** Um banco em arquivo reduz a configuração para a avaliação local. As migrações versionam a estrutura, e o seed permite reproduzir os cenários de demonstração.
+- **Curso, currículo e histórico separados.** O vínculo ao curso fica no cadastro do aluno. A estrutura curricular classifica a mesma disciplina de modo diferente entre cursos, e o histórico permite calcular a carga integralizada independentemente das matrículas ativas.
+- **Validação na API.** A interface sinaliza problemas antes do envio. O servidor aplica as regras de negócio e verifica se a matrícula pertence ao aluno autenticado.
+
 ## Tecnologias
 
 | Camada | Tecnologias |
@@ -83,6 +96,7 @@ A conta de demonstração tem histórico para explorar a carga horária e testar
 | GET | `/api/health`, `/api/cursos` | Verificar a API e listar cursos para cadastro. |
 | POST | `/api/auth/register`, `/api/auth/login`, `/api/auth/logout` | Criar conta, iniciar ou encerrar sessão. |
 | GET | `/api/auth/me` | Consultar a sessão. |
+| GET | `/api/alunos/:id` | Consultar o cadastro do aluno autenticado. |
 | GET | `/api/disciplinas`, `/api/turmas`, `/api/progresso` | Consultar catálogo, ofertas e progresso acadêmico. |
 | GET, POST | `/api/matriculas`, `/api/lista-espera` | Consultar ou criar registros do aluno. |
 | DELETE | `/api/matriculas/:id`, `/api/lista-espera/:id` | Cancelar matrícula ou sair da fila. |
@@ -95,6 +109,19 @@ A branch [feat/admin-dashboard](https://github.com/marialportela10/Sistema-de-Ma
 
 Para testar esse fluxo, execute a instalação e o seed nessa branch e use a conta local `secretaria.demo` com a senha `Secretaria@12345`.
 
+| Método | Rota | Uso |
+| --- | --- | --- |
+| POST | `/api/admin/auth/login`, `/api/admin/auth/logout` | Iniciar ou encerrar a sessão da secretaria. |
+| GET | `/api/admin/auth/me` | Consultar a sessão administrativa. |
+| GET | `/api/admin/opcoes` | Buscar opções para os formulários administrativos. |
+| GET, POST | `/api/admin/disciplinas` | Listar ou cadastrar disciplinas. |
+| PUT | `/api/admin/disciplinas/:id` | Editar uma disciplina. |
+| GET, POST | `/api/admin/professores` | Listar ou cadastrar professores. |
+| GET, POST | `/api/admin/turmas` | Listar ou abrir turmas. |
+| PUT | `/api/admin/turmas/:id/vagas` | Alterar a quantidade de vagas. |
+
+As listagens administrativas aceitam `busca` e `pagina`. As operações administrativas exigem a sessão da secretaria.
+
 ## Verificação
 
 | Diretório | Comando | O que executa |
@@ -103,3 +130,11 @@ Para testar esse fluxo, execute a instalação e o seed nessa branch e use a con
 | `backend/` | `npm run build` | Geração do cliente Prisma e compilação TypeScript. |
 | `frontend/` | `npm run lint` | Verificação com ESLint. |
 | `frontend/` | `npm run build` | Compilação TypeScript e build do Vite. |
+
+## O que faria com mais tempo
+
+- Ampliaria os testes de fluxo completo para cobrir login, expiração da sessão e o isolamento entre os perfis de aluno e secretaria.
+- Testaria solicitações simultâneas para a última vaga e a promoção da lista de espera após um cancelamento.
+- Revisaria o fluxo do aluno em telas de 360 px, com navegação por teclado e leitor de tela.
+
+A Secretaria está na branch indicada acima, com a integração à versão principal pendente.
