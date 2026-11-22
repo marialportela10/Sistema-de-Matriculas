@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import type { FormEvent } from "react";
 import { api, type Aluno, type Espera, type Matricula, type Turma } from "./api";
+import Login from "./Login";
 import "./App.css";
 
 type Aba = "ofertas" | "matriculas" | "planejamento" | "progresso";
@@ -58,6 +58,7 @@ function App() {
   const [aba, setAba] = useState<Aba>("ofertas");
   const [turmas, setTurmas] = useState<Turma[]>([]);
   const [aluno, setAluno] = useState<Aluno | null>(null);
+  const [verificandoSessao, setVerificandoSessao] = useState(true);
   const [matriculas, setMatriculas] = useState<Matricula[]>([]);
   const [esperas, setEsperas] = useState<Espera[]>([]);
   const [carregando, setCarregando] = useState(true);
@@ -69,11 +70,6 @@ function App() {
   const [soFavoritos, setSoFavoritos] = useState(false);
   const [favoritos, setFavoritos] = useState<string[]>(favoritosSalvos);
   const [plano, setPlano] = useState<string[]>([]);
-  const [modoAluno, setModoAluno] = useState<"novo" | "existente">("existente");
-  const [nome, setNome] = useState("");
-  const [email, setEmail] = useState("");
-  const [numeroMatricula, setNumeroMatricula] = useState("");
-  const [idExistente, setIdExistente] = useState("");
 
   async function carregarTurmas() {
     setCarregando(true);
@@ -96,6 +92,19 @@ function App() {
 
   useEffect(() => {
     let ativo = true;
+    void api.sessao().then((dados) => {
+      if (ativo) setAluno(dados);
+    }).catch(() => {
+      // Sem sessão ativa: a tela de login será exibida.
+    }).finally(() => {
+      if (ativo) setVerificandoSessao(false);
+    });
+    return () => { ativo = false; };
+  }, []);
+
+  useEffect(() => {
+    if (!aluno) return;
+    let ativo = true;
     void api.turmas().then((dados) => {
       if (ativo) setTurmas(dados);
     }).catch((error: unknown) => {
@@ -103,17 +112,8 @@ function App() {
     }).finally(() => {
       if (ativo) setCarregando(false);
     });
-
-    const salvo = Number(localStorage.getItem("alunoId"));
-    if (Number.isSafeInteger(salvo) && salvo > 0) {
-      void api.aluno(salvo).then((dados) => {
-        if (ativo) setAluno(dados);
-      }).catch(() => {
-        localStorage.removeItem("alunoId");
-      });
-    }
     return () => { ativo = false; };
-  }, []);
+  }, [aluno]);
 
   useEffect(() => {
     if (!aluno) return;
@@ -155,48 +155,23 @@ function App() {
   const cargaPlanejada = turmasPlanejadas.reduce((total, t) => total + t.disciplina.cargaHoraria, 0);
   const cargaMatriculada = matriculas.reduce((total, m) => total + m.turma.disciplina.cargaHoraria, 0);
 
-  async function cadastrar(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function sair() {
     setOcupado(true);
     try {
-      const novo = await api.cadastrarAluno({ nome, email, numeroMatricula });
-      localStorage.setItem("alunoId", String(novo.id));
-      setAluno(novo);
-      setAviso({ tipo: "sucesso", texto: "Aluno cadastrado. Agora você pode escolher uma turma." });
+      await api.sair();
+      setAluno(null);
+      setMatriculas([]);
+      setEsperas([]);
+      setPedido(null);
+      setPlano([]);
+      setTurmas([]);
+      setAviso(null);
+      setAba("ofertas");
     } catch (error) {
-      setAviso({ tipo: "erro", texto: error instanceof Error ? error.message : "Erro no cadastro." });
+      setAviso({ tipo: "erro", texto: error instanceof Error ? error.message : "Erro ao sair." });
     } finally {
       setOcupado(false);
     }
-  }
-
-  async function acessar(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const id = Number(idExistente);
-    if (!Number.isSafeInteger(id) || id <= 0) {
-      setAviso({ tipo: "erro", texto: "Informe um ID de aluno válido." });
-      return;
-    }
-    setOcupado(true);
-    try {
-      const encontrado = await api.aluno(id);
-      localStorage.setItem("alunoId", String(encontrado.id));
-      setAluno(encontrado);
-      setAviso({ tipo: "sucesso", texto: "Aluno de teste carregado." });
-    } catch (error) {
-      setAviso({ tipo: "erro", texto: error instanceof Error ? error.message : "Aluno não encontrado." });
-    } finally {
-      setOcupado(false);
-    }
-  }
-
-  function sair() {
-    localStorage.removeItem("alunoId");
-    setAluno(null);
-    setMatriculas([]);
-    setEsperas([]);
-    setPedido(null);
-    setAviso(null);
   }
 
   function favoritar(id: string) {
@@ -214,7 +189,6 @@ function App() {
   function iniciarPedido(turma: Turma, tipo: "matricula" | "espera") {
     if (!aluno) {
       setAviso({ tipo: "erro", texto: "Identifique o aluno antes de solicitar uma matrícula." });
-      document.getElementById("identificacao")?.focus();
       return;
     }
     setAviso(null);
@@ -260,6 +234,14 @@ function App() {
     }
   }
 
+  if (verificandoSessao) {
+    return <div className="pagina-carregando" role="status">Verificando acesso ao sistema…</div>;
+  }
+
+  if (!aluno) {
+    return <Login onEntrar={(conta) => { setAviso(null); setAluno(conta); }} />;
+  }
+
   return (
     <div className="app-shell">
       <header className="site-header">
@@ -271,7 +253,7 @@ function App() {
         {aluno && (
           <div className="usuario">
             <span>Aluno: <strong>{aluno.nome}</strong></span>
-            <button className="link-button" onClick={sair} type="button">Trocar aluno</button>
+            <button className="link-button" onClick={() => void sair()} type="button" disabled={ocupado}>Sair</button>
           </div>
         )}
       </header>
@@ -297,36 +279,6 @@ function App() {
             <span>{aviso.texto}</span>
             <button type="button" onClick={() => setAviso(null)} aria-label="Fechar aviso">×</button>
           </div>
-        )}
-
-        {!aluno && (
-          <section id="identificacao" className="painel identificacao" tabIndex={-1} aria-labelledby="titulo-identificacao">
-            <div className="cabecalho-painel">
-              <div>
-                <h2 id="titulo-identificacao">Identificação para testes</h2>
-                <p>Para testar matrículas, cadastre um aluno ou use o ID de um aluno já criado.</p>
-              </div>
-              <span className="etiqueta-neutra">Sem autenticação real</span>
-            </div>
-            <div className="alternar">
-              <button className={modoAluno === "existente" ? "ativo" : ""} type="button" onClick={() => setModoAluno("existente")}>Já tenho ID</button>
-              <button className={modoAluno === "novo" ? "ativo" : ""} type="button" onClick={() => setModoAluno("novo")}>Cadastrar aluno</button>
-            </div>
-            {modoAluno === "existente" ? (
-              <form className="form-grid" onSubmit={(event) => void acessar(event)}>
-                <label>ID numérico do aluno <input required type="number" min="1" step="1" value={idExistente}
-                  onChange={(e) => setIdExistente(e.target.value)} placeholder="Ex.: 1" /></label>
-                <button className="botao-primario" disabled={ocupado} type="submit">Acessar aluno de teste</button>
-              </form>
-            ) : (
-              <form className="form-grid" onSubmit={(event) => void cadastrar(event)}>
-                <label>Nome completo <input required maxLength={120} autoComplete="name" value={nome} onChange={(e) => setNome(e.target.value)} /></label>
-                <label>E-mail <input required type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} /></label>
-                <label>Número de matrícula <input required maxLength={30} value={numeroMatricula} onChange={(e) => setNumeroMatricula(e.target.value)} /></label>
-                <button className="botao-primario" disabled={ocupado} type="submit">Cadastrar e continuar</button>
-              </form>
-            )}
-          </section>
         )}
 
         {aba === "ofertas" && (
