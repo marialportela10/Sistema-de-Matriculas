@@ -79,7 +79,7 @@ export type AdminTurma = {
 };
 export type PaginaAdmin<T> = { items: T[]; total: number; pagina: number; totalPaginas: number };
 export type OpcoesAdmin = {
-  disciplinas: Array<Pick<Disciplina, "id" | "codigo" | "nome">>;
+  disciplinas: Array<Pick<Disciplina, "id" | "codigo" | "nome" | "cargaHoraria">>;
   professores: AdminProfessor[];
 };
 export type NovaTurma = {
