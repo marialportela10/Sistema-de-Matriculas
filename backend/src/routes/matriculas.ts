@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { prisma } from "../database/prisma.js";
-import { horariosConflitam } from "../services/horarios.js";
+import { impedimentoDeMatricula } from "../services/regras-matricula.js";
 import { idTurmaValido } from "../services/ids.js";
 
 export const matriculasRouter = Router();
@@ -68,29 +68,21 @@ matriculasRouter.post("/", async (req, res, next) => {
         include: { turma: { include: { horarios: true } } },
       });
 
-      if (atuais.some((m) => m.turmaId === turmaId)) {
-        throw new RegraDeMatriculaError(409, "Aluno ja matriculado nesta turma.");
+      const impedimento = impedimentoDeMatricula(turma, atuais, turma._count.matriculas);
+      if (impedimento) {
+        throw new RegraDeMatriculaError(409, impedimento);
       }
 
-      if (atuais.some((m) => m.turma.disciplinaId === turma.disciplinaId)) {
-        throw new RegraDeMatriculaError(409, "Aluno ja matriculado nesta disciplina.");
-      }
-
-      if (atuais.some((m) => horariosConflitam(m.turma.horarios, turma.horarios))) {
-        throw new RegraDeMatriculaError(409, "Conflito de horario com outra turma.");
-      }
-
-      if (turma._count.matriculas >= turma.capacidade) {
-        throw new RegraDeMatriculaError(409, "Turma sem vagas disponiveis.");
-      }
-
-      return tx.matricula.create({
+      const criada = await tx.matricula.create({
         data: { alunoId, turmaId },
         include: {
           aluno: true,
           turma: { include: { disciplina: true } },
         },
       });
+      // O aluno matriculado nao deve continuar na lista de espera.
+      await tx.listaEspera.deleteMany({ where: { alunoId, turmaId } });
+      return criada;
     });
 
     res.status(201).json(matricula);
