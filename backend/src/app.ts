@@ -5,6 +5,7 @@ import { alunosRouter } from "./routes/alunos.js";
 import { matriculasRouter } from "./routes/matriculas.js";
 import { listaEsperaRouter } from "./routes/lista-espera.js";
 import { authRouter } from "./routes/auth.js";
+import { progressoRouter } from "./routes/progresso.js";
 import { exigirAutenticacao } from "./services/auth.js";
 
 export const app = express();
@@ -38,21 +39,36 @@ app.get("/api/disciplinas", async (_req, res) => {
 
 // Lista as turmas com sua disciplina e horarios.
 app.get("/api/turmas", async (_req, res) => {
-  const turmas = await prisma.turma.findMany({
-    include: {
-      disciplina: true,
-      horarios: true,
-      _count: { select: { matriculas: true, listaEspera: true } },
-    },
-    orderBy: { id: "asc" },
-  });
+  const alunoId = res.locals.alunoId as number;
+  const [turmas, aluno, historico] = await Promise.all([
+    prisma.turma.findMany({
+      include: {
+        disciplina: true,
+        horarios: true,
+        _count: { select: { matriculas: true, listaEspera: true } },
+      },
+      orderBy: { id: "asc" },
+    }),
+    prisma.aluno.findUnique({ where: { id: alunoId }, select: { curso: true } }),
+    prisma.historico.findMany({
+      where: { alunoId, situacao: "APROVADA" },
+      select: { disciplinaId: true },
+    }),
+  ]);
+  const curso = aluno?.curso ? await prisma.curso.findUnique({ where: { nome: aluno.curso } }) : null;
+  const estrutura = curso ? await prisma.curriculoDisciplina.findMany({ where: { cursoId: curso.id } }) : [];
+  const categorias = new Map(estrutura.map((item) => [item.disciplinaId, item.tipo]));
+  const aprovadas = new Set(historico.map((item) => item.disciplinaId));
 
   res.json(turmas.map((turma) => ({
     ...turma,
     vagasDisponiveis: Math.max(0, turma.capacidade - turma._count.matriculas),
+    classificacao: curso ? (categorias.get(turma.disciplinaId) ?? "eletiva-livre") : null,
+    jaAprovada: aprovadas.has(turma.disciplinaId),
   })));
 });
 
+app.use("/api/progresso", progressoRouter);
 app.use("/api/alunos", alunosRouter);
 app.use("/api/matriculas", matriculasRouter);
 app.use("/api/lista-espera", listaEsperaRouter);
