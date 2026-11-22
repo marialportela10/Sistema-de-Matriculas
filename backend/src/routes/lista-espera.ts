@@ -18,6 +18,10 @@ listaEsperaRouter.get("/", async (req, res, next) => {
     res.status(400).json({ error: "Informe alunoId na consulta." });
     return;
   }
+  if (alunoId !== res.locals.alunoId) {
+    res.status(403).json({ error: "Você só pode consultar sua própria lista." });
+    return;
+  }
 
   try {
     const registros = await prisma.listaEspera.findMany({
@@ -40,6 +44,10 @@ listaEsperaRouter.post("/", async (req, res, next) => {
     !idTurmaValido(turmaId)
   ) {
     res.status(400).json({ error: "Informe alunoId positivo e turmaId no formato AA0000." });
+    return;
+  }
+  if (alunoId !== res.locals.alunoId) {
+    res.status(403).json({ error: "Não é permitido colocar outro aluno na lista." });
     return;
   }
 
@@ -88,7 +96,7 @@ listaEsperaRouter.post("/", async (req, res, next) => {
   }
 });
 
-// Retira o proprio aluno da lista (ainda sem autenticacao real).
+// Retira o aluno autenticado da lista.
 listaEsperaRouter.delete("/:id", async (req, res, next) => {
   const id = Number(req.params.id);
   const alunoId = req.body?.alunoId;
@@ -98,6 +106,10 @@ listaEsperaRouter.delete("/:id", async (req, res, next) => {
     typeof alunoId !== "number" || !Number.isSafeInteger(alunoId) || alunoId <= 0
   ) {
     res.status(400).json({ error: "Informe o id da fila e alunoId positivo." });
+    return;
+  }
+  if (alunoId !== res.locals.alunoId) {
+    res.status(403).json({ error: "Não é permitido remover outro aluno da lista." });
     return;
   }
 
