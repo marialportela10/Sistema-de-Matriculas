@@ -61,6 +61,29 @@ async function run() {
   assert.equal((await call("GET", "/api/turmas")).status, 401);
   assert.equal((await call("GET", "/api/matriculas?alunoId=1")).status, 401);
 
+  const demo = await call<Aluno>("POST", "/api/auth/login", {
+    numeroMatricula: "DEMO2026",
+    senha: "Demo@12345",
+  });
+  assert.equal(demo.status, 200);
+  const progresso = await call<{ grupos: Array<{ tipo: string; integralizada: number; emCurso: number }> }>(
+    "GET", "/api/progresso", undefined, demo.cookie,
+  );
+  assert.equal(progresso.status, 200);
+  assert.equal(progresso.data.grupos.length, 3);
+  assert.equal(progresso.data.grupos.find((g) => g.tipo === "obrigatoria")?.integralizada, 60);
+  assert.equal(progresso.data.grupos.find((g) => g.tipo === "eletiva-perfil")?.integralizada, 60);
+  const ofertasDemo = await call<Array<{ id: string; classificacao: string; jaAprovada: boolean; vagasDisponiveis: number }>>(
+    "GET", "/api/turmas", undefined, demo.cookie,
+  );
+  assert.equal(ofertasDemo.status, 200);
+  assert.equal(ofertasDemo.data.find((t) => t.id === "IP0001")?.jaAprovada, true);
+  assert.equal(ofertasDemo.data.find((t) => t.id === "IP0003")?.vagasDisponiveis, 0);
+  assert.equal(ofertasDemo.data.find((t) => t.id === "DS0001")?.classificacao, "eletiva-perfil");
+  assert.equal((await call("POST", "/api/matriculas", {
+    alunoId: demo.data.id, turmaId: "IP0001",
+  }, demo.cookie)).status, 409);
+
   const suffix = Date.now().toString(36);
   const a = await register(`a-${suffix}`);
   const b = await register(`b-${suffix}`);
