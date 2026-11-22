@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { prisma } from "../database/prisma.js";
-import { impedimentoDeMatricula } from "../services/regras-matricula.js";
+import { impedimentoAcademico, impedimentoDeMatricula } from "../services/regras-matricula.js";
 import { idTurmaValido } from "../services/ids.js";
 
 export const matriculasRouter = Router();
@@ -102,6 +102,75 @@ matriculasRouter.post("/", async (req, res, next) => {
       return;
     }
 
+    next(error);
+  }
+});
+
+// Cancela uma matricula e tenta promover a primeira pessoa elegivel da fila.
+matriculasRouter.delete("/:id", async (req, res, next) => {
+  const id = Number(req.params.id);
+  const alunoId = req.body?.alunoId;
+
+  if (
+    !Number.isSafeInteger(id) || id <= 0 ||
+    typeof alunoId !== "number" || !Number.isSafeInteger(alunoId) || alunoId <= 0
+  ) {
+    res.status(400).json({ error: "Informe o id da matricula e alunoId positivo." });
+    return;
+  }
+
+  try {
+    const resultado = await prisma.$transaction(async (tx) => {
+      const existente = await tx.matricula.findFirst({ where: { id, alunoId } });
+      if (!existente) {
+        throw new RegraDeMatriculaError(404, "Matricula nao encontrada para o aluno.");
+      }
+
+      const cancelada = await tx.matricula.delete({ where: { id } });
+      const turma = await tx.turma.findUnique({
+        where: { id: cancelada.turmaId },
+        include: {
+          horarios: true,
+          _count: { select: { matriculas: true } },
+        },
+      });
+
+      let promovido: { alunoId: number; matriculaId: number } | null = null;
+
+      if (turma && turma._count.matriculas < turma.capacidade) {
+        const fila = await tx.listaEspera.findMany({
+          where: { turmaId: turma.id },
+          orderBy: [{ criadaEm: "asc" }, { id: "asc" }],
+        });
+
+        for (const candidato of fila) {
+          const atuais = await tx.matricula.findMany({
+            where: { alunoId: candidato.alunoId, turma: { periodo: turma.periodo } },
+            include: { turma: { include: { horarios: true } } },
+          });
+
+          // Quem ficou inelegivel permanece na fila, mas nao bloqueia os demais.
+          if (impedimentoAcademico(turma, atuais)) continue;
+
+          const matricula = await tx.matricula.create({
+            data: { alunoId: candidato.alunoId, turmaId: turma.id },
+          });
+          await tx.listaEspera.delete({ where: { id: candidato.id } });
+
+          promovido = { alunoId: candidato.alunoId, matriculaId: matricula.id };
+          break;
+        }
+      }
+
+      return { cancelada, promovido };
+    });
+
+    res.json(resultado);
+  } catch (error) {
+    if (error instanceof RegraDeMatriculaError) {
+      res.status(error.status).json({ error: error.message });
+      return;
+    }
     next(error);
   }
 });
