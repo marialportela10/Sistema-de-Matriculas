@@ -84,6 +84,28 @@ async function run() {
     alunoId: demo.data.id, turmaId: "IP0001",
   }, demo.cookie)).status, 409);
 
+  // Percentual nunca supera 100%; excedente de perfil deve contar como eletiva livre.
+  await prisma.curso.update({
+    where: { codigo: "SI" },
+    data: { chObrigatorias: 15, chPerfil: 45, chLivre: 10 },
+  });
+  const limite = await call<{
+    grupos: Array<{ tipo: string; integralizada: number; falta: number; percentual: number }>;
+  }>("GET", "/api/progresso", undefined, demo.cookie);
+  assert.equal(limite.status, 200);
+  for (const grupo of limite.data.grupos) {
+    assert.ok(grupo.percentual >= 0 && grupo.percentual <= 100);
+    assert.ok(grupo.falta >= 0);
+  }
+  assert.equal(limite.data.grupos.find((g) => g.tipo === "eletiva-perfil")?.integralizada, 45);
+  assert.equal(limite.data.grupos.find((g) => g.tipo === "eletiva-livre")?.integralizada, 10);
+
+  // O nome do curso deve existir; texto arbitrário não cria um curso novo.
+  assert.equal((await call("POST", "/api/auth/register", {
+    nome: "Aluno Sem Curso", email: "semcurso@example.test", numeroMatricula: "SEM-CURSO",
+    curso: "Curso Inexistente", senha: password,
+  })).status, 400);
+
   const suffix = Date.now().toString(36);
   const a = await register(`a-${suffix}`);
   const b = await register(`b-${suffix}`);
@@ -154,6 +176,41 @@ async function run() {
     "GET", `/api/lista-espera?alunoId=${c.id}`, undefined, c.cookie,
   );
   assert.equal(afterWait.data.length, 0);
+
+  const cancelada = await prisma.matricula.findUnique({ where: { id: enrolledB.data.id } });
+  assert.equal(cancelada?.situacao, "CANCELADA");
+  assert.ok(cancelada?.canceladaEm);
+
+  // Depois da entrada na fila, uma aprovação torna o primeiro candidato inelegível.
+  const d = await register(`d-${suffix}`);
+  const e = await register(`e-${suffix}`);
+  assert.equal((await call("POST", "/api/lista-espera", {
+    alunoId: d.id, turmaId: "ED0001",
+  }, d.cookie)).status, 201);
+  assert.equal((await call("POST", "/api/lista-espera", {
+    alunoId: e.id, turmaId: "ED0001",
+  }, e.cookie)).status, 201);
+  const edoo = await prisma.disciplina.findUniqueOrThrow({ where: { codigo: "EDOO" } });
+  await prisma.historico.create({
+    data: { alunoId: d.id, disciplinaId: edoo.id, periodo: "2025.2", situacao: "APROVADA" },
+  });
+  const cMatricula = finalEnrollments.data.find((m) => m.turmaId === "ED0001");
+  assert.ok(cMatricula);
+  const segundaPromocao = await call<{ promovido: { alunoId: number } | null }>(
+    "DELETE", `/api/matriculas/${cMatricula.id}`, { alunoId: c.id }, c.cookie,
+  );
+  assert.equal(segundaPromocao.status, 200);
+  assert.equal(segundaPromocao.data.promovido?.alunoId, e.id);
+  assert.equal((await call("GET", `/api/lista-espera?alunoId=${d.id}`, undefined, d.cookie))
+    .status, 200);
+
+  // Cancelar e depois reativar a mesma turma não perde a identidade do registro.
+  await prisma.turma.update({ where: { id: "ED0001" }, data: { capacidade: 2 } });
+  const readmitida = await call<Matricula>("POST", "/api/matriculas", {
+    alunoId: c.id, turmaId: "ED0001",
+  }, c.cookie);
+  assert.equal(readmitida.status, 201);
+  assert.equal(readmitida.data.id, cMatricula.id);
 
   assert.equal((await call("POST", "/api/auth/logout", undefined, a.cookie)).status, 204);
   assert.equal((await call("GET", "/api/auth/me", undefined, a.cookie)).status, 401);
