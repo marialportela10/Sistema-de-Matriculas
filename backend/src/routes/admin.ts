@@ -84,6 +84,16 @@ adminRouter.post("/auth/logout", async (req, res, next) => {
 
 adminRouter.use(exigirSecretaria);
 
+adminRouter.get("/opcoes", async (_req, res, next) => {
+  try {
+    const [disciplinas, professores] = await Promise.all([
+      prisma.disciplina.findMany({ select: { id: true, codigo: true, nome: true }, orderBy: { nome: "asc" } }),
+      prisma.professor.findMany({ select: { id: true, nome: true, email: true }, orderBy: { nome: "asc" } }),
+    ]);
+    res.json({ disciplinas, professores });
+  } catch (error) { next(error); }
+});
+
 adminRouter.get("/disciplinas", async (req, res, next) => {
   const { pagina, busca, porPagina, skip } = paginaDaConsulta(req.query);
   const where = busca ? { OR: [{ nome: { contains: busca } }, { codigo: { contains: busca } }] } : {};
