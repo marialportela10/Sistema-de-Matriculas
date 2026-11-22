@@ -98,6 +98,7 @@ async function run() {
   const opcoes = await call<{ disciplinas: Disciplina[]; professores: Professor[] }>(
     "GET", "/api/admin/opcoes", undefined, adminCookie);
   assert.ok(opcoes.data.disciplinas.some((d) => d.id === criada.data.id));
+  assert.equal(opcoes.data.disciplinas.find((d) => d.id === criada.data.id)?.cargaHoraria, 60);
   assert.ok(opcoes.data.professores.some((p) => p.id === novaProfessora.data.id));
 
   const turmaDados = {
@@ -119,6 +120,12 @@ async function run() {
       ...turmaDados, codigo: invalida,
     }, adminCookie)).status, 400, "Turma inválida: " + invalida);
   }
+  // Even legacy database data cannot bypass the 15–120h / multiple-of-15 rule.
+  await prisma.disciplina.update({ where: { id: criada.data.id }, data: { cargaHoraria: 70 } });
+  const invalidaCarga = await call<{ error: string }>("POST", "/api/admin/turmas", turmaDados, adminCookie);
+  assert.equal(invalidaCarga.status, 400);
+  assert.match(invalidaCarga.data.error, /múltipla de 15/);
+  await prisma.disciplina.update({ where: { id: criada.data.id }, data: { cargaHoraria: 60 } });
   const turma = await call<Turma>("POST", "/api/admin/turmas", turmaDados, adminCookie);
   assert.equal(turma.status, 201);
   assert.match(turma.data.id, /^[A-Z]{2}\d{4}$/);
