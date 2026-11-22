@@ -522,32 +522,50 @@ function App() {
 
         {aba === "hours" && <>
           <div className="cabecalho-pagina"><div><span className="sobretitulo">Ensino e estrutura curricular</span><h1>Carga horária</h1>
-            <p>Entenda as horas necessárias em cada grupo para concluir o curso.</p></div></div>
+            <p>Entenda quantas horas precisa concluir em cada categoria para finalizar o curso.</p></div></div>
           <div className="informativo"><strong>Como ler esta página</strong>
             <p>Carga horária concluída é diferente de carga horária matriculada. Escolher uma turma não significa que suas horas já foram concluídas.</p></div>
-          <div className="categorias">
-            {[
-              ["Obrigatórias", "Disciplinas exigidas na estrutura curricular do seu curso."],
-              ["Eletivas de perfil", "Disciplinas opcionais previstas no perfil do curso."],
-              ["Eletivas livres", "Disciplinas de fora da estrutura curricular do curso."],
-            ].map(([nome, descricao]) => <article className="categoria" key={nome}>
-              <h3>{nome}</h3><p>{descricao}</p><strong>CH exigida: a definir</strong><small>Histórico e estrutura curricular ainda não cadastrados.</small>
-            </article>)}
-          </div>
-          <section className="painel">
-            <div className="cabecalho-secao"><h2>Seu acompanhamento acadêmico</h2><span className="etiqueta">Dados disponíveis</span></div>
-            <div className="linha"><div><strong>Carga horária em curso</strong><p>Somente as turmas em que você está matriculado neste semestre.</p></div><strong>{horasEmCurso}h</strong></div>
-            <div className="linha"><div><strong>Carga horária integralizada</strong><p>Depende das aprovações do seu histórico acadêmico.</p></div><strong>Não disponível</strong></div>
-            <div className="linha"><div><strong>Carga horária restante</strong><p>Depende das exigências curriculares do curso.</p></div><strong>Não disponível</strong></div>
-            <div className="explicacao">
-              <h3>O que significa cada categoria?</h3>
-              <details><summary>Disciplinas obrigatórias</summary><p>São previstas como obrigatórias na estrutura curricular do curso.</p></details>
-              <details><summary>Eletivas de perfil</summary><p>São eletivas previstas na estrutura do curso; a carga excedente pode contar como eletiva livre conforme as regras curriculares.</p></details>
-              <details><summary>Eletivas livres</summary><p>São disciplinas fora da estrutura curricular do seu curso.</p></details>
-              <details><summary>O que conta como carga horária concluída?</summary><p>Apenas disciplinas aprovadas no histórico. Reprovações não contam e as turmas em curso devem aparecer separadamente.</p></details>
+          {carregando ? <div className="vazio" role="status">Carregando progresso curricular…</div> : progresso ? <>
+            <div className="categorias">
+              {progresso.grupos.map((g) => <article className="categoria" key={g.tipo}>
+                <h3>{g.nome}</h3>
+                <p>{g.tipo === "obrigatoria" ? "Disciplinas exigidas na estrutura curricular do seu curso." :
+                  g.tipo === "eletiva-perfil" ? "Disciplinas opcionais previstas no perfil do seu curso." :
+                  "Disciplinas fora da estrutura curricular do seu curso."}</p>
+                <div className="progresso-valor">{g.integralizada.toLocaleString("pt-BR")}h <span>de {g.exigida.toLocaleString("pt-BR")}h</span></div>
+                <div className="barra-progresso" role="progressbar" aria-label={"Progresso de " + g.nome}
+                  aria-valuenow={g.percentual} aria-valuemin={0} aria-valuemax={100}>
+                  <span style={{ width: g.percentual + "%" }} />
+                </div>
+                <small>Faltam {g.falta.toLocaleString("pt-BR")} horas</small>
+                <small className="em-curso">{g.emCurso.toLocaleString("pt-BR")}h em curso</small>
+              </article>)}
             </div>
-            <p className="nota">Não exibimos percentuais ou metas fictícias como se fossem dados da sua matrícula. O cálculo completo será habilitado quando o histórico e a estrutura curricular estiverem disponíveis.</p>
-          </section>
+            <section className="painel">
+              <div className="cabecalho-secao"><h2>Progresso das horas exigidas</h2><span className="etiqueta">{progresso.curso}</span></div>
+              {(() => {
+                const concluido = progresso.grupos.reduce((total, g) => total + g.integralizada, 0);
+                const exigido = progresso.grupos.reduce((total, g) => total + g.exigida, 0);
+                const percentual = exigido ? Math.min(100, Math.round(100 * concluido / exigido)) : 100;
+                return <>
+                  <p><strong>{concluido.toLocaleString("pt-BR")}h concluídas</strong> de {exigido.toLocaleString("pt-BR")}h exigidas.</p>
+                  <div className="barra-progresso" role="progressbar" aria-label="Progresso curricular geral"
+                    aria-valuenow={percentual} aria-valuemin={0} aria-valuemax={100}>
+                    <span style={{ width: percentual + "%" }} />
+                  </div>
+                </>;
+              })()}
+              <p className="nota">Apenas aprovações anteriores integram a carga horária. Reprovações não contam, e matrículas ativas aparecem separadamente.</p>
+              <div className="explicacao">
+                <h3>O que significa cada categoria?</h3>
+                <details><summary>Disciplinas obrigatórias</summary><p>São disciplinas exigidas na estrutura curricular do curso.</p></details>
+                <details><summary>Eletivas de perfil</summary><p>São eletivas previstas na estrutura do curso. Horas aprovadas acima da exigência também podem contar como eletivas livres.</p></details>
+                <details><summary>Eletivas livres</summary><p>São disciplinas não incluídas na estrutura curricular do seu curso.</p></details>
+                <details><summary>O que conta como carga horária concluída?</summary><p>Somente disciplinas aprovadas em semestres anteriores. Horas em andamento são exibidas separadamente.</p></details>
+              </div>
+            </section>
+          </> : <div className="vazio"><h3>Progresso curricular indisponível</h3>
+            <p>Ainda não há estrutura curricular associada ao seu curso. Confira o curso registrado no seu perfil.</p></div>}
         </>}
       </main>
       <footer className="rodape">Sistema de Matrícula · Protótipo acadêmico · Dados de demonstração</footer>
