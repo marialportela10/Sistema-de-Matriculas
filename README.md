@@ -5,14 +5,15 @@ Protótipo acadêmico em desenvolvimento, com **React + Vite + TypeScript** no f
 ## O que já funciona no código
 
 - Consulta de disciplinas, turmas, horários e vagas.
-- Cadastro e consulta de alunos de teste.
+- Login com número de matrícula e senha (hash scrypt), sessões em cookie HttpOnly, logout e cadastro de contas fictícias.
+- Consultas e operações de matrícula vinculadas ao aluno autenticado.
 - Matrícula com validação de vagas, duplicidade, disciplina já cursada no mesmo período e conflito de horários.
 - Cancelamento de matrícula com tentativa de promoção da lista de espera.
 - Entrada, consulta e saída da lista de espera.
 - Interface de ofertas, favoritos, busca/paginação na URL, revisão antes de confirmar, planejamento e resumo das matrículas.
 - Testes unitários para IDs de turmas, conflitos de horário e regras acadêmicas.
 
-> **Importante:** autenticação real, permissões de secretaria, histórico de disciplinas concluídas e cálculo de integralização curricular ainda não estão implementados. Não utilize dados pessoais reais.
+> **Importante:** esta autenticação é adequada apenas para testar o protótipo local. Ainda faltam recuperação de senha, integração com identidade institucional, controles operacionais mais fortes e auditoria para uso real. Não utilize dados pessoais reais.
 
 ## Identificadores de turmas
 
@@ -36,7 +37,9 @@ npm.cmd run db:seed
 npm.cmd run dev
 ```
 
-A API fica disponível em `http://localhost:3001`. Se o banco já existir, faça uma cópia de segurança antes de aplicar a migração.
+A API fica disponível em `http://localhost:3001`. Se o banco já existir, faça uma cópia de segurança antes de aplicar a migração. A migração `20261122213000_student_sessions` cria a tabela de sessões e adiciona um hash de senha opcional aos alunos existentes, preservando os registros antigos.
+
+**Para entrar pela primeira vez:** abra o frontend, clique em **Criar conta**, informe um número de matrícula fictício e uma senha de pelo menos 8 caracteres; depois use esses dados no formulário **Entrar no sistema**. Contas criadas antes desta mudança não têm senha e não podem usar o login até que recebam uma senha por um procedimento administrativo. Não foi atribuída nenhuma senha padrão a esses alunos.
 
 Para validar o backend:
 
@@ -62,9 +65,12 @@ Abra `http://localhost:5173`. A API deve estar em execução. Para usar outro se
 | Método | Rota | Uso |
 | --- | --- | --- |
 | GET | `/api/health` | Estado da API |
+| POST | `/api/auth/register` | Criar conta fictícia com senha |
+| POST | `/api/auth/login` | Entrar com número de matrícula e senha |
+| GET | `/api/auth/me` | Verificar sessão |
+| POST | `/api/auth/logout` | Encerrar sessão |
 | GET | `/api/disciplinas` | Disciplinas |
 | GET | `/api/turmas` | Turmas e vagas disponíveis |
-| POST | `/api/alunos` | Cadastro de aluno de teste |
 | GET | `/api/alunos/:id` | Consulta de aluno de teste |
 | GET | `/api/matriculas?alunoId=1` | Matrículas do aluno |
 | POST | `/api/matriculas` | Criar matrícula |
@@ -73,7 +79,7 @@ Abra `http://localhost:5173`. A API deve estar em execução. Para usar outro se
 | POST | `/api/lista-espera` | Entrar na lista |
 | DELETE | `/api/lista-espera/:id` | Sair da lista |
 
-Para criar uma matrícula ou entrar na lista de espera, envie um JSON como:
+Exceto saúde e autenticação, as rotas exigem a sessão do aluno. Para criar uma matrícula ou entrar na lista de espera, envie um JSON como:
 
 ```json
 { "alunoId": 1, "turmaId": "IP0001" }
@@ -91,4 +97,4 @@ Esta branch de desenvolvimento está sendo atualizada no GitHub. O GitLab da UFP
 
 ## Próximas etapas
 
-Autenticação e autorização reais, telas da secretaria, progresso curricular completo, testes de integração/concorrência e revisão final de acessibilidade.
+Recuperação de senha e identidade institucional, perfis de secretaria, progresso curricular completo, testes de concorrência e revisão final de acessibilidade.
