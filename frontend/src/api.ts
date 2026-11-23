@@ -68,6 +68,25 @@ export type GrupoProgresso = {
 };
 export type Progresso = { curso: string; grupos: GrupoProgresso[] };
 
+export type Secretaria = { id: number; usuario: string; email: string; perfil: "secretaria" };
+export type AdminDisciplina = Disciplina & { _count?: { turmas: number } };
+export type AdminProfessor = { id: number; nome: string; email: string; _count?: { turmas: number } };
+export type AdminTurma = {
+  id: string; codigo: string; periodo: string; capacidade: number;
+  disciplinaId: number; professorId: number;
+  disciplina: Disciplina; docente: AdminProfessor; horarios: Horario[];
+  ocupadas: number; vagasDisponiveis: number;
+};
+export type PaginaAdmin<T> = { items: T[]; total: number; pagina: number; totalPaginas: number };
+export type OpcoesAdmin = {
+  disciplinas: Array<Pick<Disciplina, "id" | "codigo" | "nome" | "cargaHoraria">>;
+  professores: AdminProfessor[];
+};
+export type NovaTurma = {
+  disciplinaId: number; professorId: number; codigo: string; capacidade: number;
+  horarios: Array<{ diaSemana: number; inicio: string; fim: string }>;
+};
+
 export class ApiError extends Error {
   readonly status: number;
   constructor(status: number, message: string) {
@@ -101,6 +120,28 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 }
 
 export const api = {
+  adminSessao: () => request<Secretaria>("/api/admin/auth/me"),
+  adminEntrar: (usuario: string, senha: string) => request<Secretaria>("/api/admin/auth/login", {
+    method: "POST", body: JSON.stringify({ usuario, senha }),
+  }),
+  adminSair: () => request<void>("/api/admin/auth/logout", { method: "POST" }),
+  adminOpcoes: () => request<OpcoesAdmin>("/api/admin/opcoes"),
+  adminDisciplinas: (busca: string, pagina: number) =>
+    request<PaginaAdmin<AdminDisciplina>>(`/api/admin/disciplinas?${new URLSearchParams({ busca, pagina: String(pagina) })}`),
+  adminProfessores: (busca: string, pagina: number) =>
+    request<PaginaAdmin<AdminProfessor>>(`/api/admin/professores?${new URLSearchParams({ busca, pagina: String(pagina) })}`),
+  adminTurmas: (busca: string, pagina: number) =>
+    request<PaginaAdmin<AdminTurma>>(`/api/admin/turmas?${new URLSearchParams({ busca, pagina: String(pagina) })}`),
+  adminCriarDisciplina: (dados: Pick<Disciplina, "codigo" | "nome" | "cargaHoraria" | "ementa">) =>
+    request<AdminDisciplina>("/api/admin/disciplinas", { method: "POST", body: JSON.stringify(dados) }),
+  adminEditarDisciplina: (id: number, dados: Pick<Disciplina, "codigo" | "nome" | "cargaHoraria" | "ementa">) =>
+    request<AdminDisciplina>(`/api/admin/disciplinas/${id}`, { method: "PUT", body: JSON.stringify(dados) }),
+  adminCriarProfessor: (dados: { nome: string; email: string }) =>
+    request<AdminProfessor>("/api/admin/professores", { method: "POST", body: JSON.stringify(dados) }),
+  adminCriarTurma: (dados: NovaTurma) =>
+    request<AdminTurma>("/api/admin/turmas", { method: "POST", body: JSON.stringify(dados) }),
+  adminAlterarVagas: (id: string, capacidade: number) =>
+    request<AdminTurma>(`/api/admin/turmas/${id}/vagas`, { method: "PUT", body: JSON.stringify({ capacidade }) }),
   cursos: () => request<CursoOpcao[]>("/api/cursos"),
   turmas: () => request<Turma[]>("/api/turmas"),
   progresso: () => request<Progresso>("/api/progresso"),

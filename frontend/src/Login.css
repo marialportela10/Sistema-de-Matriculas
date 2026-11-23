@@ -124,3 +124,10 @@
   .login-texto h1 { font-size: 1.45rem; }
   .login-texto p { display: none; }
 }
+
+.login-perfis { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; padding: 5px;
+  background: #edf3f7; border-radius: 10px; margin: 0 0 23px; }
+.login-perfis button { min-height: 44px; padding: 9px 10px; border: 1px solid transparent;
+  background: transparent; border-radius: 8px; color: #344b5c; font-weight: 750; }
+.login-perfis .login-perfil-ativo { background: white; border-color: #bfd0dc; color: var(--cor-primaria);
+  box-shadow: 0 2px 5px #172a3a0d; }

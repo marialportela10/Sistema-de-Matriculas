@@ -1,0 +1,119 @@
+.admin-shell { min-height: 100vh; background: #f4f7fa; color: #172a3a; }
+.admin-topo { color: #fff; background: var(--cor-primaria); }
+.admin-topo-interno { max-width: 1280px; margin: auto; padding: 16px 28px;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.admin-identidade, .admin-usuario { display: flex; align-items: center; gap: 13px; }
+.admin-logo { font-size: 1.7rem; width: 43px; height: 43px; display: grid;
+  place-items: center; background: #ffffff22; border-radius: 11px; }
+.admin-identidade strong, .admin-identidade small { display: block; }
+.admin-identidade strong { font-size: 1.05rem; }
+.admin-identidade small { margin-top: 3px; font-size: .8rem; color: #e0edf4; }
+.admin-usuario span { font-weight: 650; }
+.admin-sair { color: #fff; background: transparent; border: 1px solid #acc7d7;
+  border-radius: 9px; padding: 9px 14px; min-height: 43px; font-weight: 700; }
+.admin-sair:hover:not(:disabled) { background: #ffffff22; }
+.admin-nav { background: #fff; border-bottom: 1px solid #d3dde5; }
+.admin-nav-interna { max-width: 1280px; padding: 0 28px; margin: auto;
+  display: flex; gap: 15px; overflow-x: auto; }
+.admin-nav button { border: none; background: transparent; padding: 17px 21px;
+  border-bottom: 3px solid transparent; color: #344b5c; font-weight: 750; white-space: nowrap; }
+.admin-nav button:hover { background: #eff5f8; }
+.admin-nav button.selecionada { color: var(--cor-primaria); border-bottom-color: var(--cor-teal);
+  background: #f0f7fa; }
+.admin-conteudo { max-width: 1280px; padding: 34px 28px 65px; margin: 0 auto; }
+.admin-cabecalho { margin-bottom: 24px; }
+.admin-sobretitulo { color: #0c686a; font-size: .78rem; font-weight: 850;
+  letter-spacing: .09em; text-transform: uppercase; margin-bottom: 8px; }
+.admin-cabecalho h1 { margin-bottom: 7px; }
+.admin-cabecalho p { color: #344b5c; margin-bottom: 0; }
+.admin-grid { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(310px, .95fr);
+  align-items: start; gap: 20px; }
+.admin-painel { border: 1px solid #d3dde5; background: #fff; border-radius: 15px;
+  box-shadow: 0 3px 16px #17466e0d; padding: 23px; min-width: 0; }
+.admin-secao-topo { display: flex; justify-content: space-between; align-items: center;
+  flex-wrap: wrap; gap: 12px; }
+.admin-secao-topo h2 { margin-bottom: 0; }
+.admin-secao-topo > span { color: #51697a; font-size: .82rem; }
+.admin-filtros { display: flex; align-items: end; gap: 12px; margin: 21px 0 18px; }
+.admin-filtros label { flex: 1; font-size: .85rem; font-weight: 750; }
+.admin-filtros input { width: 100%; }
+.admin-filtros .botao-claro { flex-shrink: 0; }
+.admin-formulario h2 { margin-bottom: 7px; }
+.admin-formulario p { color: #435f70; font-size: .86rem; margin-bottom: 18px; line-height: 1.55; }
+.admin-formulario form { display: flex; flex-direction: column; gap: 10px; }
+.admin-formulario label { font-size: .87rem; font-weight: 750; color: #263f50; }
+.admin-campo-ajuda { color: #4b6577; font-size: .76rem; line-height: 1.35; }
+.admin-campo-erro { color: #7f1d1d; font-size: .77rem; line-height: 1.4; font-weight: 700; }
+.admin-formulario input.admin-somente-leitura { background: #eff4f7; color: #344b5c; cursor: not-allowed; border-color: #c4d1da; }
+.admin-formulario input, .admin-formulario select, .admin-formulario textarea,
+.admin-filtros input, .admin-vagas input {
+  background: #fff; color: #172a3a; border: 1px solid #8ca4b4; border-radius: 9px;
+  padding: 10px 12px; min-height: 44px; width: 100%; font: inherit;
+}
+.admin-formulario textarea { resize: vertical; }
+.admin-formulario form > .botao-primario { margin-top: 12px; }
+.admin-duas-colunas { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; }
+.admin-duas-colunas > div { display: flex; flex-direction: column; gap: 9px; }
+.admin-form-acoes { display: flex; flex-wrap: wrap; gap: 9px; padding-top: 11px; }
+.admin-horarios { border: 1px solid #d3dde5; border-radius: 10px; padding: 13px; margin: 10px 0; }
+.admin-horarios legend { font-size: .88rem; font-weight: 800; padding: 0 6px; }
+.admin-formulario .admin-horarios-ajuda { margin: 0 0 14px; font-size: .8rem; color: #344b5c; }
+.admin-resumo-aulas { margin-top: 15px; border-top: 1px solid #d3dde5; padding-top: 13px;
+  color: #263f50; font-size: .84rem; }
+.admin-resumo-aulas > strong { font-size: .83rem; }
+.admin-resumo-aulas ul { margin: 8px 0 0; padding-left: 20px; }
+.admin-resumo-aulas li { margin: 4px 0; }
+
+.admin-horario { display: grid; grid-template-columns: 1.2fr .88fr .88fr auto;
+  gap: 9px; margin-bottom: 12px; align-items: end; }
+.admin-horario label { display: flex; flex-direction: column; gap: 5px; font-size: .76rem; }
+.admin-horario select, .admin-horario input { min-width: 0; padding: 7px; }
+.admin-remove { min-width: 35px; min-height: 43px; background: #fef2f2; color: #7f1d1d;
+  border: 1px solid #eac4c4; border-radius: 9px; font-size: 1.3rem; }
+.admin-horarios > button { margin-top: 4px; }
+.admin-aviso { display: flex; align-items: center; gap: 12px; border: 1px solid;
+  margin-bottom: 20px; padding: 12px 15px; border-radius: 10px; flex-wrap: wrap; font-size: .89rem; }
+.admin-aviso > button:last-child { margin-left: auto; border: none; background: transparent;
+  font-size: 1.4rem; color: inherit; padding: 3px 7px; }
+.admin-erro { background: #fef2f2; color: #7f1d1d; border-color: #ebc1c1; }
+.admin-sucesso { background: #ecfdf3; color: #14532d; border-color: #b4dec3; }
+.admin-tabela-scroll { overflow-x: auto; width: 100%; }
+.admin-tabela { border-collapse: collapse; width: 100%; text-align: left; font-size: .84rem; }
+.admin-tabela th { color: #456072; font-weight: 800; background: #f3f7fa;
+  border-bottom: 1px solid #cfdae2; padding: 12px 10px; white-space: nowrap; }
+.admin-tabela td { border-bottom: 1px solid #e1e8ed; padding: 15px 10px;
+  vertical-align: top; color: #263f50; }
+.admin-tabela td strong { font-weight: 750; }
+.admin-tabela td small { color: #4b6577; font-size: .77rem; display: block; margin-top: 6px; }
+.admin-tabela tbody tr:hover { background: #fafdff; }
+.admin-tabela .admin-link { padding: 8px 6px; color: var(--cor-primaria);
+  text-decoration: underline; font-weight: 750; background: transparent; border: 0; }
+.admin-ocupacao { font-weight: 800; color: var(--cor-primaria); white-space: nowrap; }
+.admin-vagas { display: flex; align-items: center; gap: 7px; min-width: 188px; }
+.admin-vagas input { width: 62px; min-height: 40px; padding: 7px; }
+.admin-vagas .botao-claro { padding: 8px 11px; min-height: 40px; font-size: .77rem; }
+.admin-estado { text-align: center; border: 1px dashed #a9bdcc; border-radius: 11px;
+  padding: 35px 12px; background: #fafcfd; color: #435f70; margin-bottom: 0; }
+.admin-estado p { margin: 8px 0 0; font-size: .85rem; }
+.admin-paginacao { display: flex; gap: 12px; align-items: center; justify-content: center;
+  border-top: 1px solid #e1e8ed; margin-top: 12px; padding-top: 18px; font-size: .83rem; }
+.admin-dica { color: #7f1d1d !important; font-weight: 700; }
+.admin-rodape { max-width: 1280px; padding: 20px 28px 35px; margin: auto;
+  color: #526a7b; border-top: 1px solid #d3dde5; font-size: .8rem; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+@media (max-width: 1100px) {
+  .admin-grid { grid-template-columns: minmax(0, 1fr); }
+  .admin-formulario { order: -1; }
+}
+@media (max-width: 650px) {
+  .admin-topo-interno { padding: 14px 16px; flex-wrap: wrap; }
+  .admin-conteudo { padding: 23px 14px 45px; }
+  .admin-nav-interna { padding: 0 12px; gap: 5px; }
+  .admin-nav button { padding: 14px 12px; font-size: .84rem; }
+  .admin-painel { padding: 15px; }
+  .admin-horario { grid-template-columns: 1fr 1fr; }
+  .admin-horario label:first-child { grid-column: 1 / -1; }
+  .admin-usuario { justify-content: space-between; width: 100%; }
+  .admin-duas-colunas { grid-template-columns: 1fr 1fr; }
+}
