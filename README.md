@@ -143,6 +143,7 @@ As listagens administrativas aceitam `busca` e `pagina`. As operações administ
 
 ## O que faria com mais tempo
 
+- Criaria uma área do professor, acessível pela própria conta, para consultar as turmas em que leciona e os horários das aulas.
 - Ampliaria os testes de fluxo completo para cobrir login, expiração da sessão e o isolamento entre os perfis de aluno e secretaria.
 - Testaria solicitações simultâneas para a última vaga e a promoção da lista de espera após um cancelamento.
 - Revisaria o fluxo do aluno em telas de 360 px, com navegação por teclado e leitor de tela.
