@@ -107,7 +107,17 @@ As operações acadêmicas exigem sessão de aluno. Nas consultas de matrículas
 
 A branch [feat/admin-dashboard](https://github.com/marialportela10/Sistema-de-Matriculas/tree/feat/admin-dashboard) inclui uma área com login próprio, cadastro e edição de disciplinas, cadastro de professores, abertura de turmas e ajuste de vagas. As rotas administrativas ficam sob `/api/admin`.
 
-Para testar esse fluxo, execute a instalação e o seed nessa branch e use a conta local `secretaria.demo` com a senha `Secretaria@12345`.
+Para testar a Secretaria, execute `git switch feat/admin-dashboard` na raiz do repositório logo após clonar. Siga os passos de instalação, migrações e seed acima. Na tela de login, entre como Secretaria com o usuário local `secretaria.demo` e a senha `Secretaria@12345`.
+
+### Abrir uma turma
+
+1. Selecione a disciplina e o professor. O formulário mostra a carga horária total definida no cadastro da disciplina. Ela deve ser um múltiplo de 15 entre 15 h e 120 h. Corrija o cadastro da disciplina se o valor estiver fora dessa faixa ou não for múltiplo de 15.
+2. Informe o código da turma com uma letra e até dois algarismos, como `A`, `A1` ou `A12`, e defina pelo menos uma vaga. O código é único por disciplina e semestre. A API usa um identificador interno gerado para a turma, como `IP0001`.
+3. Cadastre os horários em que as aulas serão ministradas. Para cada encontro semanal, indique dia da semana, hora de início e hora de fim. A programação semanal e a carga horária total da disciplina são campos distintos.
+
+A listagem mostra as vagas ocupadas e o total de vagas. Ao editar o total, o novo valor precisa cobrir todas as matrículas ativas da turma.
+
+### Rotas administrativas
 
 | Método | Rota | Uso |
 | --- | --- | --- |
