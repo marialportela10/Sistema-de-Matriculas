@@ -1,123 +1,150 @@
 # Sistema de Matrícula
 
-Protótipo acadêmico em desenvolvimento, com **React + Vite + TypeScript** no frontend e **Express + Prisma 7 + SQLite** no backend.
+Sistema de matrícula acadêmica desenvolvido para o teste prático da Seleção nº 5/2026. O portal permite consultar ofertas, montar a grade semanal, efetuar matrículas e acompanhar a carga horária do curso.
 
-## O que já funciona no código
+## Portal do aluno
 
-- Consulta de disciplinas, turmas, horários e vagas. Curso de cada aluno obrigatório, ligado por chave estrangeira a uma estrutura curricular.
-- Login com número de matrícula e senha (hash scrypt), sessões em cookie HttpOnly, logout e cadastro de contas fictícias.
-- Consultas e operações de matrícula vinculadas ao aluno autenticado.
-- Matrícula com validação de vagas, duplicidade, disciplina já cursada no mesmo período, conflito de horários e aprovação anterior (permite refazer disciplinas reprovadas).
-- Cancelamento de matrícula por situação (`ATIVA`/`CANCELADA`), devolução da vaga e promoção de candidato elegível, inclusive com revalidação de aprovação anterior.
-- Entrada, consulta e saída da lista de espera.
-- Portal do aluno baseado no protótipo `prototipo-matricula-5-abas-perfil.html`, com **cinco abas**: **Visão geral**, **Fazer matrícula**, **Lista de espera**, **Disciplinas** e **Carga horária**.
-- Grade semanal acima das ofertas: turmas selecionadas aparecem imediatamente e conflitos de horário ou disciplina são bloqueados; revisão antes de confirmar.
-- Catálogo de disciplinas com ementas, favoritos por aluno e busca/paginação na URL.
-- Cabeçalho com nome completo, curso e semestre do aluno. Cadastro fictício permite escolher curso.
-- Estruturas curriculares diferentes para Sistemas de Informação e Ciência da Computação, com classificação por curso e cálculo de progresso por aprovações, eletivas de perfil excedentes e horas em curso.
-- Professores como entidades próprias, com e-mail único, associados obrigatoriamente às turmas; conta de secretaria carregada pelo seed para a próxima etapa.
-- Testes unitários para IDs de turmas, conflitos de horário e regras acadêmicas.
+| Aba | O que é possível fazer |
+| --- | --- |
+| Visão geral | Conferir o resumo do semestre e as matrículas ativas. |
+| Fazer matrícula | Consultar turmas, horários e vagas, visualizar as escolhas na grade semanal e revisar a seleção antes de confirmar. |
+| Lista de espera | Entrar na fila de uma turma lotada, acompanhar a solicitação e sair da fila. |
+| Disciplinas | Buscar disciplinas, ler ementas e salvar favoritas. |
+| Carga horária | Conferir as horas exigidas, concluídas, em curso e restantes por categoria curricular. |
 
-> **Importante:** esta autenticação é adequada apenas para testar o protótipo local. Ainda faltam recuperação de senha, integração com identidade institucional, controles operacionais mais fortes e auditoria para uso real. Não utilize dados pessoais reais.
+O cadastro solicita nome, curso, número de matrícula e senha. O curso é vinculado ao aluno e pode ser consultado a partir da matrícula acadêmica pela relação `Matricula → Aluno → Curso`.
 
-## Identificadores de turmas
+### Regras de matrícula
 
-As turmas usam dois caracteres maiúsculos seguidos de quatro números: `IP0001`, `IP0002`, `ED0001`. O campo `codigo` continua identificando a seção (A, B, C). IDs de alunos permanecem numéricos.
+- A API verifica vagas, duplicidade, choque de horários, matrícula em outra turma da mesma disciplina no período e aprovação anterior. Uma disciplina reprovada pode ser cursada novamente.
+- O cancelamento libera a vaga. Se houver lista de espera, o sistema revalida a elegibilidade antes de efetivar a promoção.
+- A carga horária concluída considera as aprovações do histórico. As disciplinas em andamento aparecem separadamente, e o excedente de eletivas de perfil pode contar como eletiva livre.
 
-A migração `20261122190000_class_string_ids` converte os antigos IDs numéricos e atualiza os vínculos de horários, matrículas e lista de espera. **Antes de migrar um banco existente, pare a API e faça um backup do arquivo `.db`.** Nunca use `prisma migrate reset` para essa atualização.
+## Requisito adicional escolhido — choque de horários
 
-## Executar localmente (Windows / PowerShell)
+Escolhi impedir choques de horários para que o aluno consiga montar uma grade que possa frequentar. A grade semanal mostra as turmas selecionadas, e a interface indica qual escolha causa o conflito antes da confirmação.
 
-Requer Node.js 24 LTS ou compatível.
+Dois horários entram em conflito quando ocorrem no mesmo dia e seus intervalos se sobrepõem. Uma aula pode começar no horário em que outra termina. O portal compara as escolhas com as turmas já matriculadas e com as demais seleções. Na confirmação, a API valida novamente os horários das matrículas ativas do semestre. A lista de espera é outra funcionalidade implementada.
 
-### API
+## Principais decisões
 
-```powershell
+- **Monorepo.** A interface fica em `frontend/` e a API em `backend/`, para que os dois componentes sejam versionados juntos e possam ser executados em terminais separados.
+- **SQLite e Prisma.** Um banco em arquivo reduz a configuração para a avaliação local. As migrações versionam a estrutura, e o seed permite reproduzir os cenários de demonstração.
+- **Curso, currículo e histórico separados.** O vínculo ao curso fica no cadastro do aluno. A estrutura curricular classifica a mesma disciplina de modo diferente entre cursos, e o histórico permite calcular a carga integralizada independentemente das matrículas ativas.
+- **Validação na API.** A interface sinaliza problemas antes do envio. O servidor aplica as regras de negócio e verifica se a matrícula pertence ao aluno autenticado.
+
+## Tecnologias
+
+| Camada | Tecnologias |
+| --- | --- |
+| Interface | React, TypeScript e Vite |
+| API | Node.js, Express e TypeScript |
+| Banco de dados | SQLite e Prisma |
+| Autenticação | Senhas com hash scrypt e sessões em cookies HttpOnly |
+
+## Executar localmente
+
+Use Node.js 24 LTS e npm. No PowerShell, use `npm.cmd` nos comandos se a política de execução bloquear `npm.ps1`.
+
+```bash
+git clone https://github.com/marialportela10/Sistema-de-Matriculas.git
+cd Sistema-de-Matriculas
+```
+
+### 1. API e banco de dados
+
+Na raiz do projeto, entre em `backend` e instale as dependências.
+
+```bash
 cd backend
-npm.cmd install
-Copy-Item .env.example .env  # apenas na primeira execução
-npx.cmd prisma migrate dev
-npx.cmd prisma generate
-npm.cmd run db:seed
-npm.cmd run dev
+npm ci
 ```
 
-A API fica disponível em `http://localhost:3001`. Se o banco já existir, faça uma cópia de segurança antes de aplicar as migrações. A migração `20261122213000_student_sessions` cria sessões e preserva os alunos antigos sem atribuir senha padrão; a migração `20261122234500_student_course_and_syllabus` adiciona temporariamente o curso textual e ementas; `20261123010000_curriculum_history` introduz estruturas e históricos; `20261123023000_reconcile_student_and_professor_data` converte o curso textual em uma **chave estrangeira obrigatória**, converte professores em entidades relacionadas e adiciona a situação de matrícula; `20261123024500_secretary_account` prepara a conta da secretaria.
+Na primeira execução, copie `.env.example` para `.env` dentro de `backend`. Use `cp .env.example .env` no Bash ou `Copy-Item .env.example .env` no PowerShell. O exemplo aponta para o SQLite local em `backend/prisma/dev.db`.
 
-Os estudantes antigos com curso desconhecido são vinculados a um curso de pendência, sem atribuição silenciosa a outro curso. As migrações são verificadas sobre dados de teste anteriores para garantir que alunos, turmas, sessões, matrículas e históricos sejam preservados.
-
-**Atualizar um banco existente:** pare o backend, faça backup de `backend/prisma/dev.db`, execute `npx.cmd prisma migrate deploy` dentro de `backend`, depois `npx.cmd prisma generate` e `npm.cmd run db:seed`. O seed é idempotente e adiciona 2 cursos, 6 disciplinas, professores, 10 ofertas fictícias (incluindo uma lotada), históricos de **alunos dos dois cursos** e uma conta de secretaria, sem remover turmas já cadastradas. Corrige apenas os docentes de exemplo que ainda estavam marcados como "Professor a definir".
-
-**Para entrar pela primeira vez:** abra o frontend, clique em **Criar conta**, informe nome completo, **nome de um curso já cadastrado**, matrícula fictícia e senha de pelo menos 8 caracteres; depois use esses dados no formulário **Entrar no sistema**. Contas criadas antes desta mudança não têm senha e não podem usar o login até que recebam uma senha por um procedimento administrativo. Não foi atribuída nenhuma senha padrão a esses alunos.
-
-**Conta pronta para comparar a interface com o protótipo (apenas ambiente local):** matrícula fictícia `DEMO2026`, senha `Demo@12345`. Essa conta representa Ana Carolina Ferreira (Sistemas de Informação) e contém aprovações/reprovação de exemplo para demonstrar as barras de carga horária e o bloqueio de disciplina já aprovada. Não use essas credenciais em uma instalação pública. A conta de secretaria `secretaria.demo` é preparada no banco com senha fictícia apenas para a futura interface administrativa; **o login administrativo ainda não está disponível**.
-
-Para validar o backend:
-
-```powershell
-npm.cmd run build
-npm.cmd test
+```bash
+npm run db:migrate
+npm run db:generate
+npm run db:seed
+npm run dev
 ```
 
-### Interface
+A API roda em [localhost:3001](http://localhost:3001/api/health). Para atualizar um banco existente, pare a API, faça uma cópia do arquivo `.db` e execute `npx prisma migrate deploy` no diretório `backend`. Depois, gere o cliente e rode o seed novamente.
 
-Em outro terminal, na raiz do repositório:
+### 2. Interface
 
-```powershell
+Em outro terminal, a partir da raiz do projeto:
+
+```bash
 cd frontend
-npm.cmd install
-npm.cmd run dev
+npm ci
+npm run dev
 ```
 
-Abra `http://localhost:5173`. A API deve estar em execução. Para usar outro servidor, configure `VITE_API_URL` no ambiente do frontend.
+Abra [localhost:5173](http://localhost:5173). Mantenha a API em execução. Se alterar o endereço da API, configure `VITE_API_URL` no frontend.
 
-### Rotas principais
+### 3. Demonstração
+
+Use a matrícula fictícia `DEMO2026` com a senha `Demo@12345`, ou clique em **Criar conta** e use um curso cadastrado pelo seed, como Sistemas de Informação ou Ciência da Computação.
+
+A conta de demonstração tem histórico para explorar a carga horária e testar o bloqueio de uma disciplina já aprovada. A base também inclui uma turma lotada para testar a lista de espera. Cursos, históricos e metas curriculares são fictícios e destinados à execução local.
+
+## API
 
 | Método | Rota | Uso |
 | --- | --- | --- |
-| GET | `/api/health` | Estado da API |
-| GET | `/api/cursos` | Nomes de cursos disponíveis para cadastro fictício |
-| POST | `/api/auth/register` | Criar conta fictícia com curso válido e senha |
-| POST | `/api/auth/login` | Entrar com número de matrícula e senha |
-| GET | `/api/auth/me` | Verificar sessão |
-| POST | `/api/auth/logout` | Encerrar sessão |
-| GET | `/api/disciplinas` | Disciplinas |
-| GET | `/api/turmas` | Turmas, vagas, categoria por curso e disciplina já aprovada |
-| GET | `/api/progresso` | Carga horária exigida, concluída, em curso e restante por grupo |
-| GET | `/api/alunos/:id` | Consulta de aluno de teste |
-| GET | `/api/matriculas?alunoId=1` | Matrículas do aluno |
-| POST | `/api/matriculas` | Criar matrícula |
-| DELETE | `/api/matriculas/:id` | Cancelar matrícula |
-| GET | `/api/lista-espera?alunoId=1` | Esperas do aluno |
-| POST | `/api/lista-espera` | Entrar na lista |
-| DELETE | `/api/lista-espera/:id` | Sair da lista |
+| GET | `/api/health`, `/api/cursos` | Verificar a API e listar cursos para cadastro. |
+| POST | `/api/auth/register`, `/api/auth/login`, `/api/auth/logout` | Criar conta, iniciar ou encerrar sessão. |
+| GET | `/api/auth/me` | Consultar a sessão. |
+| GET | `/api/alunos/:id` | Consultar o cadastro do aluno autenticado. |
+| GET | `/api/disciplinas`, `/api/turmas`, `/api/progresso` | Consultar catálogo, ofertas e progresso acadêmico. |
+| GET, POST | `/api/matriculas`, `/api/lista-espera` | Consultar ou criar registros do aluno. |
+| DELETE | `/api/matriculas/:id`, `/api/lista-espera/:id` | Cancelar matrícula ou sair da fila. |
 
-Exceto saúde e autenticação, as rotas exigem a sessão do aluno. Para criar uma matrícula ou entrar na lista de espera, envie um JSON como:
+As operações acadêmicas exigem sessão de aluno. Nas consultas de matrículas e lista de espera, passe `alunoId` na query. Para criar um registro, envie `alunoId` e `turmaId` no JSON, como `{"alunoId":1,"turmaId":"IP0001"}`. Para cancelar ou sair da fila, envie `alunoId` no corpo do DELETE. Use o ID do aluno autenticado.
 
-```json
-{ "alunoId": 1, "turmaId": "IP0001" }
-```
+## Secretaria
 
-Para cancelar uma matrícula ou sair da lista, envie `{ "alunoId": 1 }` no corpo da requisição DELETE.
+A branch [feat/admin-dashboard](https://github.com/marialportela10/Sistema-de-Matriculas/tree/feat/admin-dashboard) inclui uma área com login próprio, cadastro e edição de disciplinas, cadastro de professores, abertura de turmas e ajuste de vagas. As rotas administrativas ficam sob `/api/admin`.
 
-## Organização do Git
+Para testar a Secretaria, execute `git switch feat/admin-dashboard` na raiz do repositório logo após clonar. Siga os passos de instalação, migrações e seed acima. Na tela de login, entre como Secretaria com o usuário local `secretaria.demo` e a senha `Secretaria@12345`.
 
-- `main`: versão principal.
-- `feat/enrollment-system`: desenvolvimento das funcionalidades de matrícula.
-- Commits em inglês, com prefixos `setup:`, `feat:`, `fix:` e `docs:`.
+### Abrir uma turma
 
-Esta branch de desenvolvimento está sendo atualizada no GitHub. O GitLab da UFPE não recebe automaticamente esses commits; faça o sincronismo depois de revisar e testar.
+1. Selecione a disciplina e o professor. O formulário mostra a carga horária total definida no cadastro da disciplina. Ela deve ser um múltiplo de 15 entre 15 h e 120 h. Corrija o cadastro da disciplina se o valor estiver fora dessa faixa ou não for múltiplo de 15.
+2. Informe o código da turma com uma letra e até dois algarismos, como `A`, `A1` ou `A12`, e defina pelo menos uma vaga. O código é único por disciplina e semestre. A API usa um identificador interno gerado para a turma, como `IP0001`.
+3. Cadastre os horários em que as aulas serão ministradas. Para cada encontro semanal, indique dia da semana, hora de início e hora de fim. A programação semanal e a carga horária total da disciplina são campos distintos.
 
-## Requisito adicional e progresso acadêmico
+A listagem mostra as vagas ocupadas e o total de vagas. Ao editar o total, o novo valor precisa cobrir todas as matrículas ativas da turma.
 
-Foi escolhida a **verificação de choque de horários**, pois ela evita matrículas impossíveis e melhora a seleção visual na grade semanal. Turmas cujos horários se sobrepõem não podem ser selecionadas juntas, e o backend também recusa a operação.
+### Rotas administrativas
 
-A aba **Carga horária** usa as metas da estrutura curricular cadastrada para o curso do aluno. Conta apenas disciplinas **aprovadas** no histórico como integralizadas, ignora reprovações e mostra as matrículas atuais separadamente. Horas de eletivas de perfil aprovadas acima da meta podem ser aproveitadas como eletivas livres. Os percentuais são limitados a 100% e as horas restantes nunca são negativas.
+| Método | Rota | Uso |
+| --- | --- | --- |
+| POST | `/api/admin/auth/login`, `/api/admin/auth/logout` | Iniciar ou encerrar a sessão da secretaria. |
+| GET | `/api/admin/auth/me` | Consultar a sessão administrativa. |
+| GET | `/api/admin/opcoes` | Buscar opções para os formulários administrativos. |
+| GET, POST | `/api/admin/disciplinas` | Listar ou cadastrar disciplinas. |
+| PUT | `/api/admin/disciplinas/:id` | Editar uma disciplina. |
+| GET, POST | `/api/admin/professores` | Listar ou cadastrar professores. |
+| GET, POST | `/api/admin/turmas` | Listar ou abrir turmas. |
+| PUT | `/api/admin/turmas/:id/vagas` | Alterar a quantidade de vagas. |
 
-Os cursos, metas e históricos fornecidos pelo seed são **fictícios para avaliação técnica**, não reproduzem necessariamente a matriz curricular oficial da UFPE. A área da Secretaria (autenticação própria, cadastro/edição de disciplinas, cadastro de professores, abertura de turmas e mudança de vagas) **continua pendente** e será feita na branch `feat/admin-dashboard`. O banco já contém `Professor` com e-mail único e um usuário fictício da secretaria. A função `validarCargaHoraria` impede valores fora de 15–120h ou que não sejam múltiplos de 15, e `validarVagas` impede redução abaixo das matrículas ativas; as rotas de administração ainda devem aplicar essas validações.
+As listagens administrativas aceitam `busca` e `pagina`. As operações administrativas exigem a sessão da secretaria.
 
-**Modelagem do vínculo:** `Matricula.alunoId → Aluno.id → Aluno.cursoId → Curso.id`. O curso não é copiado em cada matrícula, evitando divergências se o cadastro acadêmico mudar. Um aluno só pode ser cadastrado em um dos cursos existentes no banco.
+## Verificação
 
-## Próximas etapas
+| Diretório | Comando | O que executa |
+| --- | --- | --- |
+| `backend/` | `npm test` | Testes automatizados das regras acadêmicas. |
+| `backend/` | `npm run build` | Geração do cliente Prisma e compilação TypeScript. |
+| `frontend/` | `npm run lint` | Verificação com ESLint. |
+| `frontend/` | `npm run build` | Compilação TypeScript e build do Vite. |
 
-Recuperação de senha e identidade institucional, login e telas com permissões da secretaria, importação de currículos oficiais, testes de concorrência e revisão final de acessibilidade.
+## O que faria com mais tempo
+
+- Ampliaria os testes de fluxo completo para cobrir login, expiração da sessão e o isolamento entre os perfis de aluno e secretaria.
+- Testaria solicitações simultâneas para a última vaga e a promoção da lista de espera após um cancelamento.
+- Revisaria o fluxo do aluno em telas de 360 px, com navegação por teclado e leitor de tela.
+
+A Secretaria está na branch indicada acima, com a integração à versão principal pendente.
